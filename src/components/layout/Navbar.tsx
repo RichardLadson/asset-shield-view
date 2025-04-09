@@ -20,7 +20,7 @@ const Navbar = () => {
             <Link to="/" className="flex items-center">
               <Shield className="h-8 w-8 text-shield-navy" />
               <span className="ml-2 text-xl font-semibold text-shield-navy">
-                Shield Your Assets
+                Medicaid Planning Pro
               </span>
             </Link>
           </div>
@@ -120,3 +120,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
