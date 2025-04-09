@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Printer, Share2 } from "lucide-react";
+import { Download, FileText, Printer, Share2, DollarSign, Clock, TrendingDown, TrendingUp, Shield } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -42,11 +42,22 @@ const assetData = [
 
 // Key metrics data
 const keyMetrics = {
+  // Asset metrics
   assetsAtRisk: 580000,
   monthlyLTCCost: 9500,
   monthsUntilDepleted: 61, // 580000 / 9500 = ~61 months
   protectableAssets: 470000,
-  totalSavings: 470000, // amount protected
+  totalAssetSavings: 470000, // amount protected
+  
+  // Income metrics
+  clientMonthlyIncome: 4200,
+  medicaidIncomeLimit: 2742, // Example 2023 figure for some states (300% of SSI)
+  monthlyIncomeAtRisk: 1458, // Difference between income and limit
+  protectableIncome: 1350, // Example amount that can be protected
+  
+  // Medicaid requirements
+  medicaidAssetLimit: 2000, // Typical single person asset limit
+  assetSpendDownRequired: 578000, // assetsAtRisk - medicaidAssetLimit
 };
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
@@ -54,6 +65,11 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 const eligibilityData = [
   { name: "Without Strategy", unprotected: 580000, threshold: 2000 },
   { name: "With Strategy", unprotected: 110000, threshold: 2000 },
+];
+
+const incomeEligibilityData = [
+  { name: "Without Strategy", income: 4200, threshold: 2742 },
+  { name: "With Strategy", income: 2650, threshold: 2742 },
 ];
 
 const strategies = [
@@ -110,7 +126,7 @@ const ResultsDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold text-shield-navy">Asset Protection Results</h1>
           <p className="text-gray-600 mt-2">
-            Based on your asset information, here are our recommended protection strategies.
+            Based on your asset and income information, here's how you can qualify for Medicaid without going broke.
           </p>
         </div>
         <div className="flex space-x-2 mt-4 md:mt-0">
@@ -133,48 +149,103 @@ const ResultsDashboard = () => {
         </div>
       </div>
 
-      {/* Key Metrics Summary */}
-      <Card className="mb-8">
+      {/* The Problem: What's at Stake */}
+      <Card className="mb-8 border-red-200 bg-red-50/30">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xl text-shield-navy">Financial Impact Summary</CardTitle>
+          <CardTitle className="text-xl text-shield-navy flex items-center gap-2">
+            <TrendingDown className="h-5 w-5 text-red-500" />
+            The Problem: What You Stand to Lose
+          </CardTitle>
           <CardDescription>
-            Key metrics about your assets and long-term care planning
+            Without proper planning, qualifying for Medicaid requires depleting your assets and income
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[300px]">Metric</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead className="text-right">Details</TableHead>
+                <TableHead className="w-[300px]">Requirement</TableHead>
+                <TableHead>Your Situation</TableHead>
+                <TableHead>Medicaid Limit</TableHead>
+                <TableHead className="text-right">Impact</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell className="font-medium">Assets At Risk</TableCell>
+                <TableCell className="font-medium">Asset Limit</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.assetsAtRisk)}</TableCell>
-                <TableCell className="text-right text-gray-500">Total countable assets for Medicaid</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
+                <TableCell className="text-right text-red-600 font-medium">
+                  {formatCurrency(keyMetrics.assetSpendDownRequired)} spend-down required
+                </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium">Monthly Long-Term Care Cost</TableCell>
-                <TableCell>{formatCurrency(keyMetrics.monthlyLTCCost)}</TableCell>
-                <TableCell className="text-right text-gray-500">Average cost in your area</TableCell>
+                <TableCell className="font-medium">Monthly Income Limit</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.clientMonthlyIncome)}</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidIncomeLimit)}</TableCell>
+                <TableCell className="text-right text-red-600 font-medium">
+                  {formatCurrency(keyMetrics.monthlyIncomeAtRisk)} monthly income at risk
+                </TableCell>
               </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Months Until Assets Depleted</TableCell>
-                <TableCell>{keyMetrics.monthsUntilDepleted} months ({Math.floor(keyMetrics.monthsUntilDepleted/12)} years, {keyMetrics.monthsUntilDepleted % 12} months)</TableCell>
-                <TableCell className="text-right text-gray-500">Without Medicaid planning</TableCell>
+              <TableRow className="bg-red-100/50">
+                <TableCell className="font-bold">Time Until Assets Depleted</TableCell>
+                <TableCell colSpan={2}>
+                  Paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month for long-term care
+                </TableCell>
+                <TableCell className="text-right text-red-600 font-bold">
+                  {keyMetrics.monthsUntilDepleted} months ({Math.floor(keyMetrics.monthsUntilDepleted/12)} years, {keyMetrics.monthsUntilDepleted % 12} months)
+                </TableCell>
               </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* The Solution: What Can Be Protected */}
+      <Card className="mb-8 border-green-200 bg-green-50/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl text-shield-navy flex items-center gap-2">
+            <Shield className="h-5 w-5 text-green-500" />
+            The Solution: What You Can Protect
+          </CardTitle>
+          <CardDescription>
+            With proper Medicaid planning strategies, you can qualify for benefits while preserving your wealth
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell className="font-medium">Assets That Can Be Protected</TableCell>
+                <TableHead className="w-[300px]">Category</TableHead>
+                <TableHead>Without Planning</TableHead>
+                <TableHead>With Planning</TableHead>
+                <TableHead className="text-right">Total Savings</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">Assets Protected</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.protectableAssets)}</TableCell>
-                <TableCell className="text-right text-gray-500">Using recommended strategies</TableCell>
+                <TableCell className="text-right text-green-600 font-medium">
+                  {formatCurrency(keyMetrics.protectableAssets - keyMetrics.medicaidAssetLimit)}
+                </TableCell>
               </TableRow>
-              <TableRow className="bg-shield-lightBlue/30">
-                <TableCell className="font-bold">Total Potential Savings</TableCell>
-                <TableCell className="font-bold text-shield-navy">{formatCurrency(keyMetrics.totalSavings)}</TableCell>
-                <TableCell className="text-right text-gray-600">With proper Medicaid planning</TableCell>
+              <TableRow>
+                <TableCell className="font-medium">Monthly Income Protected</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidIncomeLimit)}</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidIncomeLimit + keyMetrics.protectableIncome)}</TableCell>
+                <TableCell className="text-right text-green-600 font-medium">
+                  {formatCurrency(keyMetrics.protectableIncome)} per month
+                </TableCell>
+              </TableRow>
+              <TableRow className="bg-green-100/50">
+                <TableCell className="font-bold">Total Value Protected</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.protectableAssets)}</TableCell>
+                <TableCell className="text-right text-green-600 font-bold">
+                  {formatCurrency(keyMetrics.totalAssetSavings)}
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -184,7 +255,10 @@ const ResultsDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Total Assets</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-shield-navy" />
+              Total Assets
+            </CardTitle>
             <CardDescription>Current value of all assets</CardDescription>
           </CardHeader>
           <CardContent>
@@ -193,7 +267,10 @@ const ResultsDashboard = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Protected Assets</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Shield className="h-4 w-4 text-shield-teal" />
+              Protected Assets
+            </CardTitle>
             <CardDescription>With recommended strategies</CardDescription>
           </CardHeader>
           <CardContent>
@@ -202,17 +279,15 @@ const ResultsDashboard = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Protection Rate</CardTitle>
-            <CardDescription>Percentage of assets protected</CardDescription>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Clock className="h-4 w-4 text-shield-navy" />
+              Time Before Assets Depleted
+            </CardTitle>
+            <CardDescription>Without Medicaid planning</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-shield-navy">{protectionPercentage}%</div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-              <div 
-                className="bg-shield-teal h-2.5 rounded-full" 
-                style={{ width: `${protectionPercentage}%` }}
-              ></div>
-            </div>
+            <div className="text-3xl font-bold text-shield-navy">{keyMetrics.monthsUntilDepleted} months</div>
+            <div className="text-sm text-gray-500">({Math.floor(keyMetrics.monthsUntilDepleted/12)} years, {keyMetrics.monthsUntilDepleted % 12} months)</div>
           </CardContent>
         </Card>
       </div>
@@ -291,31 +366,30 @@ const ResultsDashboard = () => {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Summary of Recommendations</CardTitle>
+              <CardTitle>Your Medicaid Planning Story</CardTitle>
               <CardDescription>
-                Based on your specific financial situation, we recommend the following protection strategies
+                Understanding the financial impact of Medicaid planning on your situation
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <p className="text-gray-700">
-                  Our analysis indicates that you can protect approximately <span className="font-semibold text-shield-navy">{protectionPercentage}%</span> of your assets through strategic Medicaid planning. The recommendations below are tailored to your specific situation.
+                  Based on your financial situation, qualifying for Medicaid without proper planning would require you to spend down <span className="font-semibold text-red-600">{formatCurrency(keyMetrics.assetSpendDownRequired)}</span> of your assets and reduce your monthly income by <span className="font-semibold text-red-600">{formatCurrency(keyMetrics.monthlyIncomeAtRisk)}</span>.
                 </p>
                 
-                <ul className="list-disc pl-5 space-y-2 text-gray-700">
-                  <li>
-                    <span className="font-medium">Real Estate Protection:</span> Utilize an irrevocable trust to protect your primary residence while maintaining the right to live there.
-                  </li>
-                  <li>
-                    <span className="font-medium">Liquid Assets:</span> Convert some countable assets to exempt assets and establish a spend-down strategy for non-exempt funds.
-                  </li>
-                  <li>
-                    <span className="font-medium">Investments:</span> Restructure retirement accounts to maximize spousal protections and consider annuity conversions for single applicants.
-                  </li>
-                  <li>
-                    <span className="font-medium">Personal Property:</span> Document and preserve exempt assets like vehicles and personal belongings.
-                  </li>
-                </ul>
+                <p className="text-gray-700">
+                  At your current level of assets ({formatCurrency(keyMetrics.assetsAtRisk)}), paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month for long-term care would deplete your savings in approximately <span className="font-semibold text-red-600">{keyMetrics.monthsUntilDepleted} months</span>, leaving you financially vulnerable.
+                </p>
+                
+                <div className="p-4 bg-green-50 rounded-md border border-green-200 my-6">
+                  <h4 className="text-shield-navy font-semibold text-lg mb-2">The Medicaid Planning Advantage</h4>
+                  <p className="text-gray-700">
+                    With our recommended Medicaid planning strategies, you can protect approximately <span className="font-semibold text-green-600">{formatCurrency(keyMetrics.protectableAssets)}</span> of your assets and <span className="font-semibold text-green-600">{formatCurrency(keyMetrics.protectableIncome)}</span> of monthly income while still qualifying for Medicaid benefits.
+                  </p>
+                  <p className="text-gray-700 mt-2">
+                    This means you can secure quality long-term care through Medicaid while preserving <span className="font-semibold text-green-600">{protectionPercentage}%</span> of your assets for your financial security and legacy.
+                  </p>
+                </div>
                 
                 <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
                   <p className="text-shield-navy font-medium">Important Timeline Consideration:</p>
@@ -391,9 +465,9 @@ const ResultsDashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Medicaid Eligibility Impact</CardTitle>
+                <CardTitle>Asset Eligibility Impact</CardTitle>
                 <CardDescription>
-                  Comparison of eligibility before and after implementing strategies
+                  Comparison of asset eligibility before and after implementing strategies
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-80">
@@ -421,52 +495,82 @@ const ResultsDashboard = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Eligibility Requirements</CardTitle>
+                <CardTitle>Income Eligibility Impact</CardTitle>
                 <CardDescription>
-                  Understanding Medicaid eligibility criteria
+                  Comparison of income eligibility before and after implementing strategies
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-gray-700">
-                    To qualify for Medicaid long-term care benefits, you must meet both financial and medical eligibility requirements. These requirements vary by state, but generally include:
-                  </p>
-                  
-                  <div className="space-y-4 mt-4">
-                    <div>
-                      <h4 className="font-medium text-shield-navy">Asset Limits:</h4>
-                      <ul className="list-disc pl-5 mt-1">
-                        <li className="text-gray-700">Single applicant: $2,000 in countable assets</li>
-                        <li className="text-gray-700">Married couples (if one spouse needs care): Community spouse may keep between $29,724 and $148,620 (2023 figures)</li>
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium text-shield-navy">Income Limits:</h4>
-                      <ul className="list-disc pl-5 mt-1">
-                        <li className="text-gray-700">Varies by state, typically up to 300% of SSI federal benefit rate</li>
-                        <li className="text-gray-700">Some states have "medically needy" programs for those with higher incomes</li>
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium text-shield-navy">Look-Back Period:</h4>
-                      <p className="text-gray-700 mt-1">
-                        Medicaid examines all financial transactions during the 5-year period prior to application to identify potentially disqualifying transfers.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
-                    <p className="text-shield-navy font-medium">Next Steps:</p>
-                    <p className="text-gray-700 mt-1">
-                      Schedule a detailed consultation with our Medicaid planning specialist to create a personalized eligibility timeline and implementation plan.
-                    </p>
-                  </div>
-                </div>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={incomeEligibilityData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Legend />
+                    <Bar dataKey="income" name="Monthly Income" fill="#FF8042" />
+                    <Bar dataKey="threshold" name="Medicaid Threshold" fill="#0C3B5E" />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Eligibility Requirements</CardTitle>
+              <CardDescription>
+                Understanding Medicaid eligibility criteria
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-gray-700">
+                  To qualify for Medicaid long-term care benefits, you must meet both financial and medical eligibility requirements. These requirements vary by state, but generally include:
+                </p>
+                
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <h4 className="font-medium text-shield-navy">Asset Limits:</h4>
+                    <ul className="list-disc pl-5 mt-1">
+                      <li className="text-gray-700">Single applicant: {formatCurrency(keyMetrics.medicaidAssetLimit)} in countable assets</li>
+                      <li className="text-gray-700">Married couples (if one spouse needs care): Community spouse may keep between $29,724 and $148,620 (2023 figures)</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-shield-navy">Income Limits:</h4>
+                    <ul className="list-disc pl-5 mt-1">
+                      <li className="text-gray-700">Income limit: {formatCurrency(keyMetrics.medicaidIncomeLimit)} per month (300% of SSI federal benefit rate)</li>
+                      <li className="text-gray-700">Some states have "medically needy" programs for those with higher incomes</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-shield-navy">Look-Back Period:</h4>
+                    <p className="text-gray-700 mt-1">
+                      Medicaid examines all financial transactions during the 5-year period prior to application to identify potentially disqualifying transfers.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
+                  <p className="text-shield-navy font-medium">Next Steps:</p>
+                  <p className="text-gray-700 mt-1">
+                    Schedule a detailed consultation with our Medicaid planning specialist to create a personalized eligibility timeline and implementation plan.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
