@@ -52,7 +52,7 @@ const TestimonialSection = () => {
                 </div>
               )}
               <div className="relative">
-                <p className="text-lg font-medium text-gray-900 before:content-['"'] before:text-5xl before:text-shield-teal/30 before:absolute before:-top-4 before:-left-2 before:opacity-70 before:leading-none">
+                <p className="text-lg font-medium text-gray-900 before:content-['\u201C'] before:text-5xl before:text-shield-teal/30 before:absolute before:-top-4 before:-left-2 before:opacity-70 before:leading-none">
                   {testimonial.content}
                 </p>
                 <footer className="mt-6">
