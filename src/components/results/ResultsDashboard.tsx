@@ -23,6 +23,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Printer, Share2 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Mock data
 const assetData = [
@@ -31,6 +39,15 @@ const assetData = [
   { name: "Vehicles", value: 25000, protected: 25000 },
   { name: "Investments", value: 150000, protected: 110000 },
 ];
+
+// Key metrics data
+const keyMetrics = {
+  assetsAtRisk: 580000,
+  monthlyLTCCost: 9500,
+  monthsUntilDepleted: 61, // 580000 / 9500 = ~61 months
+  protectableAssets: 470000,
+  totalSavings: 470000, // amount protected
+};
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
@@ -116,6 +133,54 @@ const ResultsDashboard = () => {
         </div>
       </div>
 
+      {/* Key Metrics Summary */}
+      <Card className="mb-8">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl text-shield-navy">Financial Impact Summary</CardTitle>
+          <CardDescription>
+            Key metrics about your assets and long-term care planning
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[300px]">Metric</TableHead>
+                <TableHead>Value</TableHead>
+                <TableHead className="text-right">Details</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">Assets At Risk</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.assetsAtRisk)}</TableCell>
+                <TableCell className="text-right text-gray-500">Total countable assets for Medicaid</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Monthly Long-Term Care Cost</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.monthlyLTCCost)}</TableCell>
+                <TableCell className="text-right text-gray-500">Average cost in your area</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Months Until Assets Depleted</TableCell>
+                <TableCell>{keyMetrics.monthsUntilDepleted} months ({Math.floor(keyMetrics.monthsUntilDepleted/12)} years, {keyMetrics.monthsUntilDepleted % 12} months)</TableCell>
+                <TableCell className="text-right text-gray-500">Without Medicaid planning</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Assets That Can Be Protected</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.protectableAssets)}</TableCell>
+                <TableCell className="text-right text-gray-500">Using recommended strategies</TableCell>
+              </TableRow>
+              <TableRow className="bg-shield-lightBlue/30">
+                <TableCell className="font-bold">Total Potential Savings</TableCell>
+                <TableCell className="font-bold text-shield-navy">{formatCurrency(keyMetrics.totalSavings)}</TableCell>
+                <TableCell className="text-right text-gray-600">With proper Medicaid planning</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
@@ -159,6 +224,7 @@ const ResultsDashboard = () => {
           <TabsTrigger value="eligibility">Medicaid Eligibility</TabsTrigger>
         </TabsList>
 
+        {/* Overview Tab Content */}
         <TabsContent value="overview" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
@@ -262,6 +328,7 @@ const ResultsDashboard = () => {
           </Card>
         </TabsContent>
 
+        {/* Strategies Tab Content */}
         <TabsContent value="strategies" className="mt-6">
           <div className="space-y-6">
             {strategies.map((strategy) => (
@@ -319,6 +386,7 @@ const ResultsDashboard = () => {
           </div>
         </TabsContent>
 
+        {/* Eligibility Tab Content */}
         <TabsContent value="eligibility" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
