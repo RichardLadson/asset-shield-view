@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, ChangeEvent } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ import {
 import { Card, CardContent } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Textarea } from "../ui/textarea";
 import { toast } from "@/hooks/use-toast";
 
 const MedicaidIntakeForm = () => {
@@ -108,6 +110,14 @@ const MedicaidIntakeForm = () => {
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
+    });
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
     });
   };
 
@@ -1244,12 +1254,12 @@ const MedicaidIntakeForm = () => {
                   <h3 className="text-lg font-medium mb-4">Additional Notes</h3>
                   <div className="space-y-2">
                     <Label htmlFor="additionalNotes">Other Relevant Information</Label>
-                    <textarea
+                    <Textarea
                       id="additionalNotes"
                       name="additionalNotes"
                       value={formData.additionalNotes}
-                      onChange={handleInputChange}
-                      className="w-full min-h-[100px] p-2 border rounded-md"
+                      onChange={handleTextareaChange}
+                      className="w-full min-h-[100px]"
                       placeholder="Any other information that may be relevant..."
                     />
                   </div>
