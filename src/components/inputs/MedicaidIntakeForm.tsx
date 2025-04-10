@@ -16,6 +16,8 @@ import {
   AdditionalInfoSection,
   ReviewSection
 } from "./form-sections";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const MedicaidIntakeForm = () => {
   const [formData, setFormData] = useState({
@@ -155,7 +157,7 @@ const MedicaidIntakeForm = () => {
         <Accordion type="single" collapsible className="w-full space-y-4">
           
           {/* 1. Client Information */}
-          <AccordionItem value="client-info" className="border rounded-lg overflow-hidden">
+          <AccordionItem value="client-info" className="border rounded-lg overflow-hidden shadow-sm">
             <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
               <h2 className="text-xl font-semibold">1. Client Information</h2>
             </AccordionTrigger>
@@ -171,7 +173,7 @@ const MedicaidIntakeForm = () => {
           </AccordionItem>
 
           {/* 2. Medical Data */}
-          <AccordionItem value="medical-data" className="border rounded-lg overflow-hidden">
+          <AccordionItem value="medical-data" className="border rounded-lg overflow-hidden shadow-sm">
             <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
               <h2 className="text-xl font-semibold">2. Medical Data</h2>
             </AccordionTrigger>
@@ -187,7 +189,7 @@ const MedicaidIntakeForm = () => {
           </AccordionItem>
 
           {/* 3. Monthly Income */}
-          <AccordionItem value="monthly-income" className="border rounded-lg overflow-hidden">
+          <AccordionItem value="monthly-income" className="border rounded-lg overflow-hidden shadow-sm">
             <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
               <h2 className="text-xl font-semibold">3. Monthly Income</h2>
             </AccordionTrigger>
@@ -200,7 +202,7 @@ const MedicaidIntakeForm = () => {
           </AccordionItem>
 
           {/* 4. Monthly Expenses */}
-          <AccordionItem value="monthly-expenses" className="border rounded-lg overflow-hidden">
+          <AccordionItem value="monthly-expenses" className="border rounded-lg overflow-hidden shadow-sm">
             <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
               <h2 className="text-xl font-semibold">4. Monthly Expenses</h2>
             </AccordionTrigger>
@@ -213,7 +215,7 @@ const MedicaidIntakeForm = () => {
           </AccordionItem>
 
           {/* 5. Assets and Liabilities */}
-          <AccordionItem value="assets" className="border rounded-lg overflow-hidden">
+          <AccordionItem value="assets" className="border rounded-lg overflow-hidden shadow-sm">
             <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
               <h2 className="text-xl font-semibold">5. Assets and Liabilities</h2>
             </AccordionTrigger>
@@ -227,7 +229,7 @@ const MedicaidIntakeForm = () => {
           </AccordionItem>
 
           {/* 6. Additional Information */}
-          <AccordionItem value="additional-info" className="border rounded-lg overflow-hidden">
+          <AccordionItem value="additional-info" className="border rounded-lg overflow-hidden shadow-sm">
             <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
               <h2 className="text-xl font-semibold">6. Additional Information</h2>
             </AccordionTrigger>
@@ -242,7 +244,7 @@ const MedicaidIntakeForm = () => {
           </AccordionItem>
 
           {/* 7. Review and Submit */}
-          <AccordionItem value="review" className="border rounded-lg overflow-hidden">
+          <AccordionItem value="review" className="border rounded-lg overflow-hidden shadow-sm">
             <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
               <h2 className="text-xl font-semibold">7. Review and Submit</h2>
             </AccordionTrigger>

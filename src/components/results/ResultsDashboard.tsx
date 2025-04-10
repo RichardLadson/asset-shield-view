@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   BarChart, 
@@ -31,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Mock data
 const assetData = [
@@ -104,6 +104,7 @@ const strategies = [
 
 const ResultsDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const isMobile = useIsMobile();
 
   // Calculate total assets and protected assets
   const totalAssets = assetData.reduce((sum, item) => sum + item.value, 0);
@@ -129,7 +130,7 @@ const ResultsDashboard = () => {
             Based on your asset and income information, here's how you can qualify for Medicaid without going broke.
           </p>
         </div>
-        <div className="flex space-x-2 mt-4 md:mt-0">
+        <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
           <Button variant="outline" className="flex items-center gap-2">
             <Printer className="h-4 w-4" />
             <span className="hidden sm:inline">Print</span>
@@ -292,287 +293,310 @@ const ResultsDashboard = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="strategies">Recommended Strategies</TabsTrigger>
-          <TabsTrigger value="eligibility">Medicaid Eligibility</TabsTrigger>
-        </TabsList>
+      {/* Enhanced tab navigation - more prominent styling */}
+      <div className="relative mb-2">
+        <div className="absolute inset-0 bg-gradient-to-r from-shield-navy/10 via-shield-teal/20 to-shield-navy/10 rounded-lg -z-10"></div>
+        <Tabs 
+          defaultValue="overview" 
+          className="w-full" 
+          onValueChange={setActiveTab}
+        >
+          <TabsList className="w-full grid grid-cols-3 p-1 bg-transparent gap-1">
+            <TabsTrigger 
+              value="overview" 
+              className="data-[state=active]:bg-shield-teal data-[state=active]:text-white py-3 text-sm sm:text-base"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="strategies" 
+              className="data-[state=active]:bg-shield-teal data-[state=active]:text-white py-3 text-sm sm:text-base"
+            >
+              Recommended Strategies
+            </TabsTrigger>
+            <TabsTrigger 
+              value="eligibility" 
+              className="data-[state=active]:bg-shield-teal data-[state=active]:text-white py-3 text-sm sm:text-base"
+            >
+              Medicaid Eligibility
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Overview Tab Content */}
-        <TabsContent value="overview" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Asset Breakdown</CardTitle>
-                <CardDescription>
-                  Distribution of your assets by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={assetData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {assetData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Protected vs. Unprotected</CardTitle>
-                <CardDescription>
-                  Comparison of protected and unprotected assets by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={assetData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    <Legend />
-                    <Bar dataKey="protected" name="Protected" fill="#5BC2A8" />
-                    <Bar dataKey="value" name="Total Value" fill="#0C3B5E" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Your Medicaid Planning Story</CardTitle>
-              <CardDescription>
-                Understanding the financial impact of Medicaid planning on your situation
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-gray-700">
-                  Based on your financial situation, qualifying for Medicaid without proper planning would require you to spend down <span className="font-semibold text-red-600">{formatCurrency(keyMetrics.assetSpendDownRequired)}</span> of your assets and reduce your monthly income by <span className="font-semibold text-red-600">{formatCurrency(keyMetrics.monthlyIncomeAtRisk)}</span>.
-                </p>
-                
-                <p className="text-gray-700">
-                  At your current level of assets ({formatCurrency(keyMetrics.assetsAtRisk)}), paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month for long-term care would deplete your savings in approximately <span className="font-semibold text-red-600">{keyMetrics.monthsUntilDepleted} months</span>, leaving you financially vulnerable.
-                </p>
-                
-                <div className="p-4 bg-green-50 rounded-md border border-green-200 my-6">
-                  <h4 className="text-shield-navy font-semibold text-lg mb-2">The Medicaid Planning Advantage</h4>
-                  <p className="text-gray-700">
-                    With our recommended Medicaid planning strategies, you can protect approximately <span className="font-semibold text-green-600">{formatCurrency(keyMetrics.protectableAssets)}</span> of your assets and <span className="font-semibold text-green-600">{formatCurrency(keyMetrics.protectableIncome)}</span> of monthly income while still qualifying for Medicaid benefits.
-                  </p>
-                  <p className="text-gray-700 mt-2">
-                    This means you can secure quality long-term care through Medicaid while preserving <span className="font-semibold text-green-600">{protectionPercentage}%</span> of your assets for your financial security and legacy.
-                  </p>
-                </div>
-                
-                <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
-                  <p className="text-shield-navy font-medium">Important Timeline Consideration:</p>
-                  <p className="text-gray-700 mt-1">
-                    For maximum protection, these strategies should be implemented at least 5 years before applying for Medicaid due to the look-back period. Please consult with our advisors to create a detailed implementation timeline.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Strategies Tab Content */}
-        <TabsContent value="strategies" className="mt-6">
-          <div className="space-y-6">
-            {strategies.map((strategy) => (
-              <Card key={strategy.id}>
+          {/* Overview Tab Content */}
+          <TabsContent value="overview" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
                 <CardHeader>
-                  <CardTitle>{strategy.name}</CardTitle>
-                  <CardDescription>{strategy.description}</CardDescription>
+                  <CardTitle>Asset Breakdown</CardTitle>
+                  <CardDescription>
+                    Distribution of your assets by category
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <h4 className="font-medium text-shield-navy mb-2">Benefits</h4>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {strategy.pros.map((pro, index) => (
-                          <li key={index} className="text-gray-700">{pro}</li>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={assetData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {assetData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-shield-navy mb-2">Limitations</h4>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {strategy.cons.map((con, index) => (
-                          <li key={index} className="text-gray-700">{con}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <div className="mb-4">
-                        <h4 className="font-medium text-shield-navy mb-1">Effectiveness</h4>
-                        <div className="flex items-center">
-                          <div className={`h-2.5 rounded-full w-full ${
-                            strategy.effectiveness === "High" 
-                              ? "bg-green-500" 
-                              : strategy.effectiveness === "Medium-High"
-                              ? "bg-teal-500"
-                              : "bg-yellow-500"
-                          }`}></div>
-                          <span className="ml-2 text-sm text-gray-700">{strategy.effectiveness}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-shield-navy mb-1">Timing</h4>
-                        <p className="text-sm text-gray-700">{strategy.timing}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-6 text-center">
-                    <Button className="bg-shield-navy hover:bg-shield-navy/90">
-                      Learn More About This Strategy
-                    </Button>
-                  </div>
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </TabsContent>
 
-        {/* Eligibility Tab Content */}
-        <TabsContent value="eligibility" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Protected vs. Unprotected</CardTitle>
+                  <CardDescription>
+                    Comparison of protected and unprotected assets by category
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={assetData}
+                      margin={{
+                        top: 20,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                      <Legend />
+                      <Bar dataKey="protected" name="Protected" fill="#5BC2A8" />
+                      <Bar dataKey="value" name="Total Value" fill="#0C3B5E" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Asset Eligibility Impact</CardTitle>
+                <CardTitle>Your Medicaid Planning Story</CardTitle>
                 <CardDescription>
-                  Comparison of asset eligibility before and after implementing strategies
+                  Understanding the financial impact of Medicaid planning on your situation
                 </CardDescription>
               </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={eligibilityData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    <Legend />
-                    <Bar dataKey="unprotected" name="Countable Assets" fill="#FF8042" />
-                    <Bar dataKey="threshold" name="Medicaid Threshold" fill="#0C3B5E" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Income Eligibility Impact</CardTitle>
-                <CardDescription>
-                  Comparison of income eligibility before and after implementing strategies
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={incomeEligibilityData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    <Legend />
-                    <Bar dataKey="income" name="Monthly Income" fill="#FF8042" />
-                    <Bar dataKey="threshold" name="Medicaid Threshold" fill="#0C3B5E" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Eligibility Requirements</CardTitle>
-              <CardDescription>
-                Understanding Medicaid eligibility criteria
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-gray-700">
-                  To qualify for Medicaid long-term care benefits, you must meet both financial and medical eligibility requirements. These requirements vary by state, but generally include:
-                </p>
-                
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <h4 className="font-medium text-shield-navy">Asset Limits:</h4>
-                    <ul className="list-disc pl-5 mt-1">
-                      <li className="text-gray-700">Single applicant: {formatCurrency(keyMetrics.medicaidAssetLimit)} in countable assets</li>
-                      <li className="text-gray-700">Married couples (if one spouse needs care): Community spouse may keep between $29,724 and $148,620 (2023 figures)</li>
-                    </ul>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-gray-700">
+                    Based on your financial situation, qualifying for Medicaid without proper planning would require you to spend down <span className="font-semibold text-red-600">{formatCurrency(keyMetrics.assetSpendDownRequired)}</span> of your assets and reduce your monthly income by <span className="font-semibold text-red-600">{formatCurrency(keyMetrics.monthlyIncomeAtRisk)}</span>.
+                  </p>
+                  
+                  <p className="text-gray-700">
+                    At your current level of assets ({formatCurrency(keyMetrics.assetsAtRisk)}), paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month for long-term care would deplete your savings in approximately <span className="font-semibold text-red-600">{keyMetrics.monthsUntilDepleted} months</span>, leaving you financially vulnerable.
+                  </p>
+                  
+                  <div className="p-4 bg-green-50 rounded-md border border-green-200 my-6">
+                    <h4 className="text-shield-navy font-semibold text-lg mb-2">The Medicaid Planning Advantage</h4>
+                    <p className="text-gray-700">
+                      With our recommended Medicaid planning strategies, you can protect approximately <span className="font-semibold text-green-600">{formatCurrency(keyMetrics.protectableAssets)}</span> of your assets and <span className="font-semibold text-green-600">{formatCurrency(keyMetrics.protectableIncome)}</span> of monthly income while still qualifying for Medicaid benefits.
+                    </p>
+                    <p className="text-gray-700 mt-2">
+                      This means you can secure quality long-term care through Medicaid while preserving <span className="font-semibold text-green-600">{protectionPercentage}%</span> of your assets for your financial security and legacy.
+                    </p>
                   </div>
                   
-                  <div>
-                    <h4 className="font-medium text-shield-navy">Income Limits:</h4>
-                    <ul className="list-disc pl-5 mt-1">
-                      <li className="text-gray-700">Income limit: {formatCurrency(keyMetrics.medicaidIncomeLimit)} per month (300% of SSI federal benefit rate)</li>
-                      <li className="text-gray-700">Some states have "medically needy" programs for those with higher incomes</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-shield-navy">Look-Back Period:</h4>
+                  <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
+                    <p className="text-shield-navy font-medium">Important Timeline Consideration:</p>
                     <p className="text-gray-700 mt-1">
-                      Medicaid examines all financial transactions during the 5-year period prior to application to identify potentially disqualifying transfers.
+                      For maximum protection, these strategies should be implemented at least 5 years before applying for Medicaid due to the look-back period. Please consult with our advisors to create a detailed implementation timeline.
                     </p>
                   </div>
                 </div>
-                
-                <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
-                  <p className="text-shield-navy font-medium">Next Steps:</p>
-                  <p className="text-gray-700 mt-1">
-                    Schedule a detailed consultation with our Medicaid planning specialist to create a personalized eligibility timeline and implementation plan.
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Strategies Tab Content */}
+          <TabsContent value="strategies" className="mt-6">
+            <div className="space-y-6">
+              {strategies.map((strategy) => (
+                <Card key={strategy.id}>
+                  <CardHeader>
+                    <CardTitle>{strategy.name}</CardTitle>
+                    <CardDescription>{strategy.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <h4 className="font-medium text-shield-navy mb-2">Benefits</h4>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {strategy.pros.map((pro, index) => (
+                            <li key={index} className="text-gray-700">{pro}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-shield-navy mb-2">Limitations</h4>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {strategy.cons.map((con, index) => (
+                            <li key={index} className="text-gray-700">{con}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="mb-4">
+                          <h4 className="font-medium text-shield-navy mb-1">Effectiveness</h4>
+                          <div className="flex items-center">
+                            <div className={`h-2.5 rounded-full w-full ${
+                              strategy.effectiveness === "High" 
+                                ? "bg-green-500" 
+                                : strategy.effectiveness === "Medium-High"
+                                ? "bg-teal-500"
+                                : "bg-yellow-500"
+                            }`}></div>
+                            <span className="ml-2 text-sm text-gray-700">{strategy.effectiveness}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-shield-navy mb-1">Timing</h4>
+                          <p className="text-sm text-gray-700">{strategy.timing}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-6 text-center">
+                      <Button className="bg-shield-navy hover:bg-shield-navy/90">
+                        Learn More About This Strategy
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Eligibility Tab Content */}
+          <TabsContent value="eligibility" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Asset Eligibility Impact</CardTitle>
+                  <CardDescription>
+                    Comparison of asset eligibility before and after implementing strategies
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={eligibilityData}
+                      margin={{
+                        top: 20,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                      <Legend />
+                      <Bar dataKey="unprotected" name="Countable Assets" fill="#FF8042" />
+                      <Bar dataKey="threshold" name="Medicaid Threshold" fill="#0C3B5E" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Income Eligibility Impact</CardTitle>
+                  <CardDescription>
+                    Comparison of income eligibility before and after implementing strategies
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={incomeEligibilityData}
+                      margin={{
+                        top: 20,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                      <Legend />
+                      <Bar dataKey="income" name="Monthly Income" fill="#FF8042" />
+                      <Bar dataKey="threshold" name="Medicaid Threshold" fill="#0C3B5E" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Eligibility Requirements</CardTitle>
+                <CardDescription>
+                  Understanding Medicaid eligibility criteria
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-gray-700">
+                    To qualify for Medicaid long-term care benefits, you must meet both financial and medical eligibility requirements. These requirements vary by state, but generally include:
                   </p>
+                  
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <h4 className="font-medium text-shield-navy">Asset Limits:</h4>
+                      <ul className="list-disc pl-5 mt-1">
+                        <li className="text-gray-700">Single applicant: {formatCurrency(keyMetrics.medicaidAssetLimit)} in countable assets</li>
+                        <li className="text-gray-700">Married couples (if one spouse needs care): Community spouse may keep between $29,724 and $148,620 (2023 figures)</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-shield-navy">Income Limits:</h4>
+                      <ul className="list-disc pl-5 mt-1">
+                        <li className="text-gray-700">Income limit: {formatCurrency(keyMetrics.medicaidIncomeLimit)} per month (300% of SSI federal benefit rate)</li>
+                        <li className="text-gray-700">Some states have "medically needy" programs for those with higher incomes</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-shield-navy">Look-Back Period:</h4>
+                      <p className="text-gray-700 mt-1">
+                        Medicaid examines all financial transactions during the 5-year period prior to application to identify potentially disqualifying transfers.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
+                    <p className="text-shield-navy font-medium">Next Steps:</p>
+                    <p className="text-gray-700 mt-1">
+                      Schedule a detailed consultation with our Medicaid planning specialist to create a personalized eligibility timeline and implementation plan.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
