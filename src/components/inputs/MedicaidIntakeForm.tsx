@@ -1,2202 +1,1299 @@
-
-import React, { useState } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { format } from 'date-fns';
+import React, { useState } from "react";
+import { format } from "date-fns";
+import { CalendarIcon, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
+import { Calendar } from "../ui/calendar";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { 
-  CalendarIcon, 
-  User, 
-  Users, 
-  Home, 
-  Phone, 
-  Mail, 
-  FileText, 
-  Heart, 
-  DollarSign,
-  Building,
-  Car,
-  ShieldCheck,
-  Gift,
-  FileCheck,
-  ScrollText,
-  Info
-} from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-
-// Define the schema for the form
-const formSchema = z.object({
-  // Client Information
-  date: z.date({
-    required_error: "Please select a date.",
-  }),
-  fileNo: z.string().optional(),
-  homePhone: z.string().optional(),
-  cellPhone: z.string().optional(),
-  businessPhone: z.string().optional(),
-  faxNo: z.string().optional(),
-  email: z.string().email({ message: "Invalid email address" }).optional(),
-  applicantName: z.string().min(2, { message: "Applicant name must be at least 2 characters." }),
-  spouseName: z.string().optional(),
-  streetAddress: z.string().min(2, { message: "Street address is required." }),
-  city: z.string().min(2, { message: "City is required." }),
-  state: z.string().min(1, { message: "Please select a state." }),
-  zipCode: z.string().min(5, { message: "Zip code must be at least 5 characters." }),
-  applicantBirthDate: z.date({
-    required_error: "Please select applicant's birth date.",
-  }),
-  spouseBirthDate: z.date().optional(),
-  applicantSSN: z.string().optional(),
-  spouseSSN: z.string().optional(),
-  applicantCitizen: z.boolean().default(false),
-  spouseCitizen: z.boolean().default(false),
-  veteranStatus: z.string().optional(),
-  maritalStatus: z.string().min(1, { message: "Please select marital status." }),
-  emergencyContactName: z.string().optional(),
-  emergencyContactPhone: z.string().optional(),
-  
-  // Medical Data
-  primaryDiagnosis: z.string().optional(),
-  facilityName: z.string().optional(),
-  dateEnteredNursingHome: z.date().optional(),
-  medicalStatus: z.string().optional(),
-  recentHospitalStay: z.boolean().default(false),
-  hospitalStayDuration: z.number().min(0).optional(),
-  longTermCareInsurance: z.boolean().default(false),
-  insuranceDetails: z.string().optional(),
-  
-  // Monthly Income
-  applicantSocialSecurity: z.number().min(0).default(0),
-  spouseSocialSecurity: z.number().min(0).default(0),
-  applicantPension: z.number().min(0).default(0),
-  spousePension: z.number().min(0).default(0),
-  annuityIncome: z.number().min(0).default(0),
-  rentalIncome: z.number().min(0).default(0),
-  investmentIncome: z.number().min(0).default(0),
-  otherIncomeSources: z.string().optional(),
-  otherIncomeAmount: z.number().min(0).default(0),
-  
-  // Monthly Expenses
-  rentMortgage: z.number().min(0).default(0),
-  realEstateTaxes: z.number().min(0).default(0),
-  utilities: z.number().min(0).default(0),
-  homeownersInsurance: z.number().min(0).default(0),
-  housingMaintenance: z.number().min(0).default(0),
-  food: z.number().min(0).default(0),
-  medicalNonReimbursed: z.number().min(0).default(0),
-  healthInsurancePremiums: z.number().min(0).default(0),
-  transportation: z.number().min(0).default(0),
-  clothing: z.number().min(0).default(0),
-  extraordinaryMedical: z.number().min(0).default(0),
-  
-  // Assets and Liabilities
-  checkingApplicant: z.number().min(0).default(0),
-  checkingSpouse: z.number().min(0).default(0),
-  checkingJoint: z.number().min(0).default(0),
-  savingsApplicant: z.number().min(0).default(0),
-  savingsSpouse: z.number().min(0).default(0),
-  savingsJoint: z.number().min(0).default(0),
-  moneyMarket: z.number().min(0).default(0),
-  cds: z.number().min(0).default(0),
-  investments: z.number().min(0).default(0),
-  retirementAccounts: z.number().min(0).default(0),
-  lifeInsuranceFaceValue: z.number().min(0).default(0),
-  lifeInsuranceCashValue: z.number().min(0).default(0),
-  homeValue: z.number().min(0).default(0),
-  mortgageOutstanding: z.number().min(0).default(0),
-  intentToReturnHome: z.boolean().default(true),
-  personalProperty: z.number().min(0).default(0),
-  exemptVehicleValue: z.number().min(0).default(0),
-  burialPlots: z.boolean().default(false),
-  
-  // Additional Notes
-  additionalNotes: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-const defaultValues: Partial<FormValues> = {
-  date: new Date(),
-  applicantCitizen: true,
-  spouseCitizen: true,
-  recentHospitalStay: false,
-  longTermCareInsurance: false,
-  intentToReturnHome: true,
-  burialPlots: false,
-  applicantSocialSecurity: 0,
-  spouseSocialSecurity: 0,
-  applicantPension: 0,
-  spousePension: 0,
-  annuityIncome: 0,
-  rentalIncome: 0,
-  investmentIncome: 0,
-  otherIncomeAmount: 0,
-};
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "../ui/accordion";
+import { Card, CardContent } from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { toast } from "@/hooks/use-toast";
 
 const MedicaidIntakeForm = () => {
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("client-info");
-  
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues,
+  const [formData, setFormData] = useState({
+    clientDate: undefined as Date | undefined,
+    fileNo: "",
+    homePhone: "",
+    cellPhone: "",
+    businessPhone: "",
+    faxNo: "",
+    email: "",
+    applicantName: "",
+    spouseName: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    applicantBirthDate: undefined as Date | undefined,
+    spouseBirthDate: undefined as Date | undefined,
+    applicantSSN: "",
+    spouseSSN: "",
+    applicantCitizen: false,
+    spouseCitizen: false,
+    veteranStatus: "",
+    maritalStatus: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    // Medical Data
+    primaryDiagnosis: "",
+    facilityName: "",
+    facilityEntryDate: undefined as Date | undefined,
+    medicalStatus: "",
+    recentHospitalStay: false,
+    hospitalStayDuration: "",
+    longTermCareInsurance: false,
+    insuranceDetails: "",
+    // Income
+    applicantSocialSecurity: "",
+    spouseSocialSecurity: "",
+    applicantPension: "",
+    spousePension: "",
+    annuityIncome: "",
+    rentalIncome: "",
+    investmentIncome: "",
+    otherIncomeSources: "",
+    // Expenses
+    rentMortgage: "",
+    realEstateTaxes: "",
+    utilities: "",
+    homeownersInsurance: "",
+    housingMaintenance: "",
+    food: "",
+    medicalNonReimbursed: "",
+    healthInsurancePremiums: "",
+    transportation: "",
+    clothing: "",
+    extraordinaryMedical: "",
+    // Assets
+    applicantChecking: "",
+    spouseChecking: "",
+    jointChecking: "",
+    applicantSavings: "",
+    spouseSavings: "",
+    jointSavings: "",
+    moneyMarket: "",
+    cds: "",
+    stocksBonds: "",
+    retirementAccounts: "",
+    lifeInsuranceFaceValue: "",
+    lifeInsuranceCashValue: "",
+    homeValue: "",
+    outstandingMortgage: "",
+    intentToReturnHome: false,
+    householdProperty: "",
+    vehicleValue: "",
+    burialPlots: false,
+    // Additional Info
+    trustInfo: "",
+    giftsTransfers: false,
+    giftsDetails: "",
+    powerOfAttorney: false,
+    healthcareProxy: false,
+    livingWill: false,
+    lastWill: false,
+    additionalNotes: ""
   });
 
-  const calculateTotalIncome = () => {
-    const values = form.getValues();
-    return (
-      (values.applicantSocialSecurity || 0) +
-      (values.spouseSocialSecurity || 0) +
-      (values.applicantPension || 0) +
-      (values.spousePension || 0) +
-      (values.annuityIncome || 0) +
-      (values.rentalIncome || 0) +
-      (values.investmentIncome || 0) +
-      (values.otherIncomeAmount || 0)
-    );
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
+    });
   };
 
-  const calculateShelterExpenses = () => {
-    const values = form.getValues();
-    return (
-      (values.rentMortgage || 0) +
-      (values.realEstateTaxes || 0) +
-      (values.utilities || 0) +
-      (values.homeownersInsurance || 0) +
-      (values.housingMaintenance || 0)
-    );
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
   };
 
-  const calculateNonShelterExpenses = () => {
-    const values = form.getValues();
-    return (
-      (values.food || 0) +
-      (values.medicalNonReimbursed || 0) +
-      (values.healthInsurancePremiums || 0) +
-      (values.transportation || 0) +
-      (values.clothing || 0) +
-      (values.extraordinaryMedical || 0)
-    );
+  const handleDateChange = (name: string, date: Date | undefined) => {
+    setFormData({
+      ...formData,
+      [name]: date,
+    });
   };
 
-  const calculateTotalExpenses = () => {
-    return calculateShelterExpenses() + calculateNonShelterExpenses();
-  };
-
-  function onSubmit(data: FormValues) {
-    console.log("Form submitted:", data);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     toast({
       title: "Form Submitted",
-      description: "Your Medicaid planning intake form has been submitted.",
+      description: "Your Medicaid Planning Intake information has been saved successfully.",
     });
-  }
+    console.log("Form data:", formData);
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center text-shield-navy">
-            Medicaid Planning Intake Form
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <Tabs 
-                value={activeTab} 
-                onValueChange={setActiveTab}
-                className="w-full"
-              >
-                <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 w-full">
-                  <TabsTrigger value="client-info">Client Info</TabsTrigger>
-                  <TabsTrigger value="medical-data">Medical Data</TabsTrigger>
-                  <TabsTrigger value="income">Income</TabsTrigger>
-                  <TabsTrigger value="expenses">Expenses</TabsTrigger>
-                  <TabsTrigger value="assets">Assets</TabsTrigger>
-                  <TabsTrigger value="additional">Additional Info</TabsTrigger>
-                  <TabsTrigger value="review">Review</TabsTrigger>
-                </TabsList>
-
-                {/* Client Information Tab */}
-                <TabsContent value="client-info" className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="date"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                initialFocus
-                                className="pointer-events-auto"
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="fileNo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>File No.</FormLabel>
-                          <FormControl>
-                            <Input placeholder="File number" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="applicantName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name (Applicant)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="spouseName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name (Spouse)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Jane Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="streetAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Street Address</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123 Main St" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>City</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Anytown" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="state"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select state" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="AL">Alabama</SelectItem>
-                              <SelectItem value="AK">Alaska</SelectItem>
-                              <SelectItem value="AZ">Arizona</SelectItem>
-                              <SelectItem value="AR">Arkansas</SelectItem>
-                              <SelectItem value="CA">California</SelectItem>
-                              <SelectItem value="CO">Colorado</SelectItem>
-                              <SelectItem value="CT">Connecticut</SelectItem>
-                              <SelectItem value="DE">Delaware</SelectItem>
-                              <SelectItem value="FL">Florida</SelectItem>
-                              <SelectItem value="GA">Georgia</SelectItem>
-                              <SelectItem value="HI">Hawaii</SelectItem>
-                              <SelectItem value="ID">Idaho</SelectItem>
-                              <SelectItem value="IL">Illinois</SelectItem>
-                              <SelectItem value="IN">Indiana</SelectItem>
-                              <SelectItem value="IA">Iowa</SelectItem>
-                              <SelectItem value="KS">Kansas</SelectItem>
-                              <SelectItem value="KY">Kentucky</SelectItem>
-                              <SelectItem value="LA">Louisiana</SelectItem>
-                              <SelectItem value="ME">Maine</SelectItem>
-                              <SelectItem value="MD">Maryland</SelectItem>
-                              <SelectItem value="MA">Massachusetts</SelectItem>
-                              <SelectItem value="MI">Michigan</SelectItem>
-                              <SelectItem value="MN">Minnesota</SelectItem>
-                              <SelectItem value="MS">Mississippi</SelectItem>
-                              <SelectItem value="MO">Missouri</SelectItem>
-                              <SelectItem value="MT">Montana</SelectItem>
-                              <SelectItem value="NE">Nebraska</SelectItem>
-                              <SelectItem value="NV">Nevada</SelectItem>
-                              <SelectItem value="NH">New Hampshire</SelectItem>
-                              <SelectItem value="NJ">New Jersey</SelectItem>
-                              <SelectItem value="NM">New Mexico</SelectItem>
-                              <SelectItem value="NY">New York</SelectItem>
-                              <SelectItem value="NC">North Carolina</SelectItem>
-                              <SelectItem value="ND">North Dakota</SelectItem>
-                              <SelectItem value="OH">Ohio</SelectItem>
-                              <SelectItem value="OK">Oklahoma</SelectItem>
-                              <SelectItem value="OR">Oregon</SelectItem>
-                              <SelectItem value="PA">Pennsylvania</SelectItem>
-                              <SelectItem value="RI">Rhode Island</SelectItem>
-                              <SelectItem value="SC">South Carolina</SelectItem>
-                              <SelectItem value="SD">South Dakota</SelectItem>
-                              <SelectItem value="TN">Tennessee</SelectItem>
-                              <SelectItem value="TX">Texas</SelectItem>
-                              <SelectItem value="UT">Utah</SelectItem>
-                              <SelectItem value="VT">Vermont</SelectItem>
-                              <SelectItem value="VA">Virginia</SelectItem>
-                              <SelectItem value="WA">Washington</SelectItem>
-                              <SelectItem value="WV">West Virginia</SelectItem>
-                              <SelectItem value="WI">Wisconsin</SelectItem>
-                              <SelectItem value="WY">Wyoming</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="zipCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Zip Code</FormLabel>
-                          <FormControl>
-                            <Input placeholder="12345" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="applicantBirthDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Birth Date (Applicant)</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date("1900-01-01")
-                                }
-                                initialFocus
-                                className="pointer-events-auto"
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="spouseBirthDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Birth Date (Spouse)</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date("1900-01-01")
-                                }
-                                initialFocus
-                                className="pointer-events-auto"
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="space-y-4">
-                      <h3 className="text-md font-medium">Contact Information</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="homePhone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Home Phone</FormLabel>
-                              <FormControl>
-                                <Input placeholder="(555) 123-4567" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
+    <div className="container mx-auto py-8 px-4 md:px-6">
+      <h1 className="text-3xl font-bold mb-6 text-center">Medicaid Planning Intake Form</h1>
+      
+      <form onSubmit={handleSubmit}>
+        <Accordion type="single" collapsible className="w-full space-y-4">
+          
+          {/* 1. Client Information */}
+          <AccordionItem value="client-info" className="border rounded-lg overflow-hidden">
+            <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
+              <h2 className="text-xl font-semibold">1. Client Information</h2>
+            </AccordionTrigger>
+            <AccordionContent className="p-4">
+              <Card>
+                <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Date */}
+                  <div className="space-y-2">
+                    <Label htmlFor="clientDate">Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.clientDate && "text-muted-foreground"
                           )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.clientDate ? (
+                            format(formData.clientDate, "PPP")
+                          ) : (
+                            <span>Select date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 pointer-events-auto">
+                        <Calendar
+                          mode="single"
+                          selected={formData.clientDate}
+                          onSelect={(date) => handleDateChange("clientDate", date)}
+                          initialFocus
+                          className="p-3"
                         />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-                        <FormField
-                          control={form.control}
-                          name="cellPhone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Cell Phone</FormLabel>
-                              <FormControl>
-                                <Input placeholder="(555) 123-4567" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
+                  {/* File No. */}
+                  <div className="space-y-2">
+                    <Label htmlFor="fileNo">File No.</Label>
+                    <Input 
+                      id="fileNo" 
+                      name="fileNo" 
+                      value={formData.fileNo} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  {/* Phone Numbers */}
+                  <div className="space-y-2">
+                    <Label htmlFor="homePhone">Home Phone No.</Label>
+                    <Input 
+                      id="homePhone" 
+                      name="homePhone" 
+                      value={formData.homePhone} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cellPhone">Cell Phone No.</Label>
+                    <Input 
+                      id="cellPhone" 
+                      name="cellPhone" 
+                      value={formData.cellPhone} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="businessPhone">Business Phone No.</Label>
+                    <Input 
+                      id="businessPhone" 
+                      name="businessPhone" 
+                      value={formData.businessPhone} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="faxNo">Fax No.</Label>
+                    <Input 
+                      id="faxNo" 
+                      name="faxNo" 
+                      value={formData.faxNo} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input 
+                      id="email" 
+                      name="email" 
+                      type="email" 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  {/* Names */}
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantName">Full Name (Applicant)</Label>
+                    <Input 
+                      id="applicantName" 
+                      name="applicantName" 
+                      value={formData.applicantName} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="spouseName">Full Name (Spouse)</Label>
+                    <Input 
+                      id="spouseName" 
+                      name="spouseName" 
+                      value={formData.spouseName} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  {/* Address */}
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Street Address</Label>
+                    <Input 
+                      id="address" 
+                      name="address" 
+                      value={formData.address} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input 
+                      id="city" 
+                      name="city" 
+                      value={formData.city} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State</Label>
+                    <Select onValueChange={(value) => handleSelectChange("state", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AL">Alabama</SelectItem>
+                        <SelectItem value="AK">Alaska</SelectItem>
+                        <SelectItem value="AZ">Arizona</SelectItem>
+                        <SelectItem value="AR">Arkansas</SelectItem>
+                        <SelectItem value="CA">California</SelectItem>
+                        <SelectItem value="CO">Colorado</SelectItem>
+                        {/* More states would be added here */}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode">Zip Code</Label>
+                    <Input 
+                      id="zipCode" 
+                      name="zipCode" 
+                      value={formData.zipCode} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  {/* Birth Dates */}
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantBirthDate">Birth Date (Applicant)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.applicantBirthDate && "text-muted-foreground"
                           )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.applicantBirthDate ? (
+                            format(formData.applicantBirthDate, "PPP")
+                          ) : (
+                            <span>Select date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 pointer-events-auto">
+                        <Calendar
+                          mode="single"
+                          selected={formData.applicantBirthDate}
+                          onSelect={(date) => handleDateChange("applicantBirthDate", date)}
+                          initialFocus
+                          className="p-3"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="spouseBirthDate">Birth Date (Spouse)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.spouseBirthDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.spouseBirthDate ? (
+                            format(formData.spouseBirthDate, "PPP")
+                          ) : (
+                            <span>Select date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 pointer-events-auto">
+                        <Calendar
+                          mode="single"
+                          selected={formData.spouseBirthDate}
+                          onSelect={(date) => handleDateChange("spouseBirthDate", date)}
+                          initialFocus
+                          className="p-3"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* SSN */}
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantSSN">Social Security Number (Applicant)</Label>
+                    <Input 
+                      id="applicantSSN" 
+                      name="applicantSSN" 
+                      value={formData.applicantSSN} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="spouseSSN">Social Security Number (Spouse)</Label>
+                    <Input 
+                      id="spouseSSN" 
+                      name="spouseSSN" 
+                      value={formData.spouseSSN} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  {/* Citizenship */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="applicantCitizen" 
+                      name="applicantCitizen" 
+                      checked={formData.applicantCitizen}
+                      onCheckedChange={(checked) => 
+                        setFormData({...formData, applicantCitizen: checked as boolean})
+                      } 
+                    />
+                    <Label htmlFor="applicantCitizen">U.S. Citizen (Applicant)</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="spouseCitizen" 
+                      name="spouseCitizen" 
+                      checked={formData.spouseCitizen}
+                      onCheckedChange={(checked) => 
+                        setFormData({...formData, spouseCitizen: checked as boolean})
+                      } 
+                    />
+                    <Label htmlFor="spouseCitizen">U.S. Citizen (Spouse)</Label>
+                  </div>
+
+                  {/* Veteran Status */}
+                  <div className="space-y-2">
+                    <Label htmlFor="veteranStatus">Veteran Status</Label>
+                    <Select onValueChange={(value) => handleSelectChange("veteranStatus", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="applicant">Applicant</SelectItem>
+                        <SelectItem value="spouse">Spouse</SelectItem>
+                        <SelectItem value="both">Both</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Marital Status */}
+                  <div className="space-y-2">
+                    <Label htmlFor="maritalStatus">Marital Status</Label>
+                    <Select onValueChange={(value) => handleSelectChange("maritalStatus", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="married">Married</SelectItem>
+                        <SelectItem value="single">Single</SelectItem>
+                        <SelectItem value="divorced">Divorced</SelectItem>
+                        <SelectItem value="widowed">Widowed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Emergency Contact */}
+                  <div className="space-y-2">
+                    <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
+                    <Input 
+                      id="emergencyContactName" 
+                      name="emergencyContactName" 
+                      value={formData.emergencyContactName} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="emergencyContactPhone">Emergency Contact Phone Number</Label>
+                    <Input 
+                      id="emergencyContactPhone" 
+                      name="emergencyContactPhone" 
+                      value={formData.emergencyContactPhone} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 2. Medical Data */}
+          <AccordionItem value="medical-data" className="border rounded-lg overflow-hidden">
+            <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
+              <h2 className="text-xl font-semibold">2. Medical Data</h2>
+            </AccordionTrigger>
+            <AccordionContent className="p-4">
+              <Card>
+                <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Primary Diagnosis */}
+                  <div className="space-y-2">
+                    <Label htmlFor="primaryDiagnosis">Primary Diagnosis</Label>
+                    <Input 
+                      id="primaryDiagnosis" 
+                      name="primaryDiagnosis" 
+                      value={formData.primaryDiagnosis} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  {/* Nursing Home */}
+                  <div className="space-y-2">
+                    <Label htmlFor="facilityName">Name of Facility</Label>
+                    <Input 
+                      id="facilityName" 
+                      name="facilityName" 
+                      value={formData.facilityName} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="facilityEntryDate">Date Entered Nursing Home</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.facilityEntryDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.facilityEntryDate ? (
+                            format(formData.facilityEntryDate, "PPP")
+                          ) : (
+                            <span>Select date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 pointer-events-auto">
+                        <Calendar
+                          mode="single"
+                          selected={formData.facilityEntryDate}
+                          onSelect={(date) => handleDateChange("facilityEntryDate", date)}
+                          initialFocus
+                          className="p-3"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Medical Status */}
+                  <div className="space-y-2">
+                    <Label htmlFor="medicalStatus">Current Medical Status</Label>
+                    <Select onValueChange={(value) => handleSelectChange("medicalStatus", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="well">Well</SelectItem>
+                        <SelectItem value="declining">Declining</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Recent Hospital Stay */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="recentHospitalStay" 
+                        name="recentHospitalStay" 
+                        checked={formData.recentHospitalStay}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, recentHospitalStay: checked as boolean})
+                        } 
+                      />
+                      <Label htmlFor="recentHospitalStay">Recent Hospital Stay</Label>
+                    </div>
+                    {formData.recentHospitalStay && (
+                      <div className="mt-2">
+                        <Label htmlFor="hospitalStayDuration">Duration (days)</Label>
+                        <Input 
+                          id="hospitalStayDuration" 
+                          name="hospitalStayDuration" 
+                          type="number" 
+                          value={formData.hospitalStayDuration} 
+                          onChange={handleInputChange} 
                         />
                       </div>
+                    )}
+                  </div>
+
+                  {/* Long-Term Care Insurance */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="longTermCareInsurance" 
+                        name="longTermCareInsurance" 
+                        checked={formData.longTermCareInsurance}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, longTermCareInsurance: checked as boolean})
+                        } 
+                      />
+                      <Label htmlFor="longTermCareInsurance">Long-Term Care Insurance</Label>
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name="businessPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Phone</FormLabel>
-                          <FormControl>
-                            <Input placeholder="(555) 123-4567" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="faxNo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fax Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="(555) 123-4567" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input placeholder="email@example.com" type="email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="applicantSSN"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Social Security Number (Applicant)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="XXX-XX-XXXX" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="spouseSSN"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Social Security Number (Spouse)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="XXX-XX-XXXX" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="applicantCitizen"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              U.S. Citizen (Applicant)
-                            </FormLabel>
-                            <FormDescription>
-                              Is the applicant a U.S. citizen?
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="spouseCitizen"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              U.S. Citizen (Spouse)
-                            </FormLabel>
-                            <FormDescription>
-                              Is the spouse a U.S. citizen?
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="veteranStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Veteran Status</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select veteran status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              <SelectItem value="applicant">Applicant</SelectItem>
-                              <SelectItem value="spouse">Spouse</SelectItem>
-                              <SelectItem value="both">Both</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="maritalStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Marital Status</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select marital status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="married">Married</SelectItem>
-                              <SelectItem value="single">Single</SelectItem>
-                              <SelectItem value="divorced">Divorced</SelectItem>
-                              <SelectItem value="widowed">Widowed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="emergencyContactName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Emergency Contact Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Emergency contact name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="emergencyContactPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Emergency Contact Phone</FormLabel>
-                          <FormControl>
-                            <Input placeholder="(555) 123-4567" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button 
-                      type="button" 
-                      className="bg-shield-teal hover:bg-shield-teal/90"
-                      onClick={() => setActiveTab("medical-data")}
-                    >
-                      Next: Medical Data
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                {/* Medical Data Tab */}
-                <TabsContent value="medical-data" className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="primaryDiagnosis"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Primary Diagnosis</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Primary diagnosis" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="facilityName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Name of Facility</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Facility name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="dateEnteredNursingHome"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Date Entered Nursing Home</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => date > new Date()}
-                                initialFocus
-                                className="pointer-events-auto"
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="medicalStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Medical Status</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="well">Well</SelectItem>
-                              <SelectItem value="declining">Declining</SelectItem>
-                              <SelectItem value="critical">Critical</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="recentHospitalStay"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Recent Hospital Stay
-                            </FormLabel>
-                            <FormDescription>
-                              Indicate if there was a recent hospital stay
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    {form.watch("recentHospitalStay") && (
-                      <FormField
-                        control={form.control}
-                        name="hospitalStayDuration"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Duration (days)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="0" 
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-
-                    <FormField
-                      control={form.control}
-                      name="longTermCareInsurance"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Long-Term Care Insurance
-                            </FormLabel>
-                            <FormDescription>
-                              Does the applicant have long-term care insurance?
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    {form.watch("longTermCareInsurance") && (
-                      <FormField
-                        control={form.control}
-                        name="insuranceDetails"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Insurance Provider and Policy Details</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Enter details about the insurance provider and policy" 
-                                className="min-h-[100px]"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-                  </div>
-                  <div className="flex justify-between">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setActiveTab("client-info")}
-                    >
-                      Previous: Client Info
-                    </Button>
-                    <Button 
-                      type="button" 
-                      className="bg-shield-teal hover:bg-shield-teal/90"
-                      onClick={() => setActiveTab("income")}
-                    >
-                      Next: Income
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                {/* Monthly Income Tab */}
-                <TabsContent value="income" className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="applicantSocialSecurity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Social Security Benefits (Applicant)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="spouseSocialSecurity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Social Security Benefits (Spouse)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="applicantPension"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pension (Gross) - Applicant</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="spousePension"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pension (Gross) - Spouse</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="annuityIncome"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Annuity Income</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="rentalIncome"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Rental Income</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="investmentIncome"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Investment Income</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="space-y-4">
-                      <h3 className="text-md font-medium">Other Income Sources</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="otherIncomeSources"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Other income source" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="otherIncomeAmount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Amount</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                                  <Input 
-                                    type="number" 
-                                    placeholder="0.00" 
-                                    className="pl-7"
-                                    {...field}
-                                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                    {formData.longTermCareInsurance && (
+                      <div className="mt-2">
+                        <Label htmlFor="insuranceDetails">Insurance Provider and Policy Details</Label>
+                        <Input 
+                          id="insuranceDetails" 
+                          name="insuranceDetails" 
+                          value={formData.insuranceDetails} 
+                          onChange={handleInputChange} 
                         />
                       </div>
-                    </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 3. Monthly Income */}
+          <AccordionItem value="monthly-income" className="border rounded-lg overflow-hidden">
+            <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
+              <h2 className="text-xl font-semibold">3. Monthly Income</h2>
+            </AccordionTrigger>
+            <AccordionContent className="p-4">
+              <Card>
+                <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Social Security Benefits */}
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantSocialSecurity">Social Security Benefits (Applicant)</Label>
+                    <Input 
+                      id="applicantSocialSecurity" 
+                      name="applicantSocialSecurity" 
+                      type="text" 
+                      value={formData.applicantSocialSecurity} 
+                      onChange={handleInputChange} 
+                      placeholder="$0.00"
+                    />
                   </div>
 
-                  <div className="bg-gray-100 p-4 rounded-md mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="spouseSocialSecurity">Social Security Benefits (Spouse)</Label>
+                    <Input 
+                      id="spouseSocialSecurity" 
+                      name="spouseSocialSecurity" 
+                      type="text" 
+                      value={formData.spouseSocialSecurity} 
+                      onChange={handleInputChange} 
+                      placeholder="$0.00"
+                    />
+                  </div>
+
+                  {/* Pension */}
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantPension">Pension (Gross) - Applicant</Label>
+                    <Input 
+                      id="applicantPension" 
+                      name="applicantPension" 
+                      type="text" 
+                      value={formData.applicantPension} 
+                      onChange={handleInputChange} 
+                      placeholder="$0.00"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="spousePension">Pension (Gross) - Spouse</Label>
+                    <Input 
+                      id="spousePension" 
+                      name="spousePension" 
+                      type="text" 
+                      value={formData.spousePension} 
+                      onChange={handleInputChange} 
+                      placeholder="$0.00"
+                    />
+                  </div>
+
+                  {/* Other Income */}
+                  <div className="space-y-2">
+                    <Label htmlFor="annuityIncome">Annuity Income</Label>
+                    <Input 
+                      id="annuityIncome" 
+                      name="annuityIncome" 
+                      type="text" 
+                      value={formData.annuityIncome} 
+                      onChange={handleInputChange} 
+                      placeholder="$0.00"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="rentalIncome">Rental Income</Label>
+                    <Input 
+                      id="rentalIncome" 
+                      name="rentalIncome" 
+                      type="text" 
+                      value={formData.rentalIncome} 
+                      onChange={handleInputChange} 
+                      placeholder="$0.00"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="investmentIncome">Investment Income</Label>
+                    <Input 
+                      id="investmentIncome" 
+                      name="investmentIncome" 
+                      type="text" 
+                      value={formData.investmentIncome} 
+                      onChange={handleInputChange} 
+                      placeholder="$0.00"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="otherIncomeSources">Other Income Sources</Label>
+                    <Input 
+                      id="otherIncomeSources" 
+                      name="otherIncomeSources" 
+                      value={formData.otherIncomeSources} 
+                      onChange={handleInputChange} 
+                      placeholder="Description and amount"
+                    />
+                  </div>
+
+                  {/* Total (calculated) */}
+                  <div className="col-span-full pt-4 border-t">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold">Total Monthly Income:</span>
-                      <span className="font-semibold">${calculateTotalIncome().toFixed(2)}</span>
+                      <Label className="text-lg font-medium">Total Monthly Income:</Label>
+                      <span className="text-lg font-bold">
+                        {/* Example calculation - in a real app, would parse values and calculate */}
+                        $0.00
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 4. Monthly Expenses */}
+          <AccordionItem value="monthly-expenses" className="border rounded-lg overflow-hidden">
+            <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
+              <h2 className="text-xl font-semibold">4. Monthly Expenses</h2>
+            </AccordionTrigger>
+            <AccordionContent className="p-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="text-lg font-medium mb-4">Shelter Expenses</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="rentMortgage">Rent/Mortgage</Label>
+                      <Input 
+                        id="rentMortgage" 
+                        name="rentMortgage" 
+                        type="text" 
+                        value={formData.rentMortgage} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="realEstateTaxes">Real Estate Taxes</Label>
+                      <Input 
+                        id="realEstateTaxes" 
+                        name="realEstateTaxes" 
+                        type="text" 
+                        value={formData.realEstateTaxes} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="utilities">Utilities (water, sewer, electric)</Label>
+                      <Input 
+                        id="utilities" 
+                        name="utilities" 
+                        type="text" 
+                        value={formData.utilities} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="homeownersInsurance">Homeowners Insurance Premium</Label>
+                      <Input 
+                        id="homeownersInsurance" 
+                        name="homeownersInsurance" 
+                        type="text" 
+                        value={formData.homeownersInsurance} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="housingMaintenance">Housing Maintenance Costs</Label>
+                      <Input 
+                        id="housingMaintenance" 
+                        name="housingMaintenance" 
+                        type="text" 
+                        value={formData.housingMaintenance} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
                     </div>
                   </div>
 
-                  <div className="flex justify-between">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setActiveTab("medical-data")}
-                    >
-                      Previous: Medical Data
-                    </Button>
-                    <Button 
-                      type="button" 
-                      className="bg-shield-teal hover:bg-shield-teal/90"
-                      onClick={() => setActiveTab("expenses")}
-                    >
-                      Next: Expenses
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                {/* Monthly Expenses Tab */}
-                <TabsContent value="expenses" className="space-y-6">
+                  <h3 className="text-lg font-medium mb-4">Non-Shelter Expenses</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="col-span-1 md:col-span-2">
-                      <h3 className="text-lg font-medium mb-2">Shelter Expenses</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="food">Food</Label>
+                      <Input 
+                        id="food" 
+                        name="food" 
+                        type="text" 
+                        value={formData.food} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="rentMortgage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Rent/Mortgage</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="realEstateTaxes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Real Estate Taxes</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="utilities"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Utilities (water, sewer, electric)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="homeownersInsurance"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Homeowners Insurance Premium</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="housingMaintenance"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Housing Maintenance Costs</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="col-span-1 md:col-span-2 mt-4">
-                      <h3 className="text-lg font-medium mb-2">Non-Shelter Expenses</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="medicalNonReimbursed">Medical (Non-Reimbursed)</Label>
+                      <Input 
+                        id="medicalNonReimbursed" 
+                        name="medicalNonReimbursed" 
+                        type="text" 
+                        value={formData.medicalNonReimbursed} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="food"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Food</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="healthInsurancePremiums">Health Insurance Premiums</Label>
+                      <Input 
+                        id="healthInsurancePremiums" 
+                        name="healthInsurancePremiums" 
+                        type="text" 
+                        value={formData.healthInsurancePremiums} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
 
-                    <FormField
-                      control={form.control}
-                      name="medicalNonReimbursed"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Medical (Non-Reimbursed)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="transportation">Transportation</Label>
+                      <Input 
+                        id="transportation" 
+                        name="transportation" 
+                        type="text" 
+                        value={formData.transportation} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
 
-                    <FormField
-                      control={form.control}
-                      name="healthInsurancePremiums"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Health Insurance Premiums</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="clothing">Clothing, Other Personal Needs</Label>
+                      <Input 
+                        id="clothing" 
+                        name="clothing" 
+                        type="text" 
+                        value={formData.clothing} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
 
-                    <FormField
-                      control={form.control}
-                      name="transportation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Transportation</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="clothing"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Clothing, Other Personal Needs</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="extraordinaryMedical"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Extraordinary Medical Expenses</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            E.g., surgeries, specialist visits
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="extraordinaryMedical">Extraordinary Medical Expenses</Label>
+                      <Input 
+                        id="extraordinaryMedical" 
+                        name="extraordinaryMedical" 
+                        type="text" 
+                        value={formData.extraordinaryMedical} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
                   </div>
 
-                  <div className="bg-gray-100 p-4 rounded-md mt-4 space-y-2">
+                  {/* Allowable Deductions (calculated) */}
+                  <div className="mt-6 pt-4 border-t">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium">Shelter Expenses:</span>
-                      <span>${calculateShelterExpenses().toFixed(2)}</span>
+                      <Label className="text-lg font-medium">Allowable Deductions:</Label>
+                      <span className="text-lg font-bold">
+                        {/* Example calculation - in a real app, would parse values and calculate */}
+                        $0.00
+                      </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Non-Shelter Expenses:</span>
-                      <span>${calculateNonShelterExpenses().toFixed(2)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 5. Assets and Liabilities */}
+          <AccordionItem value="assets" className="border rounded-lg overflow-hidden">
+            <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
+              <h2 className="text-xl font-semibold">5. Assets and Liabilities</h2>
+            </AccordionTrigger>
+            <AccordionContent className="p-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="text-lg font-medium mb-4">Countable and Non-Countable Assets</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    {/* Checking Accounts */}
+                    <div className="space-y-2">
+                      <Label htmlFor="applicantChecking">Checking Accounts (Applicant)</Label>
+                      <Input 
+                        id="applicantChecking" 
+                        name="applicantChecking" 
+                        type="text" 
+                        value={formData.applicantChecking} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
                     </div>
-                    <div className="flex justify-between items-center pt-2 border-t">
-                      <span className="font-semibold">Total Monthly Expenses:</span>
-                      <span className="font-semibold">${calculateTotalExpenses().toFixed(2)}</span>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="spouseChecking">Checking Accounts (Spouse)</Label>
+                      <Input 
+                        id="spouseChecking" 
+                        name="spouseChecking" 
+                        type="text" 
+                        value={formData.spouseChecking} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="jointChecking">Checking Accounts (Joint)</Label>
+                      <Input 
+                        id="jointChecking" 
+                        name="jointChecking" 
+                        type="text" 
+                        value={formData.jointChecking} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    {/* Savings Accounts */}
+                    <div className="space-y-2">
+                      <Label htmlFor="applicantSavings">Savings Accounts (Applicant)</Label>
+                      <Input 
+                        id="applicantSavings" 
+                        name="applicantSavings" 
+                        type="text" 
+                        value={formData.applicantSavings} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="spouseSavings">Savings Accounts (Spouse)</Label>
+                      <Input 
+                        id="spouseSavings" 
+                        name="spouseSavings" 
+                        type="text" 
+                        value={formData.spouseSavings} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="jointSavings">Savings Accounts (Joint)</Label>
+                      <Input 
+                        id="jointSavings" 
+                        name="jointSavings" 
+                        type="text" 
+                        value={formData.jointSavings} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    {/* Other Assets */}
+                    <div className="space-y-2">
+                      <Label htmlFor="moneyMarket">Money Market Accounts</Label>
+                      <Input 
+                        id="moneyMarket" 
+                        name="moneyMarket" 
+                        type="text" 
+                        value={formData.moneyMarket} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="cds">Certificates of Deposit (CDs)</Label>
+                      <Input 
+                        id="cds" 
+                        name="cds" 
+                        type="text" 
+                        value={formData.cds} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="stocksBonds">Stocks, Bonds, Mutual Funds</Label>
+                      <Input 
+                        id="stocksBonds" 
+                        name="stocksBonds" 
+                        type="text" 
+                        value={formData.stocksBonds} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="retirementAccounts">Retirement Accounts (IRAs, 401k)</Label>
+                      <Input 
+                        id="retirementAccounts" 
+                        name="retirementAccounts" 
+                        type="text" 
+                        value={formData.retirementAccounts} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    {/* Life Insurance */}
+                    <div className="space-y-2">
+                      <Label htmlFor="lifeInsuranceFaceValue">Life Insurance - Face Value</Label>
+                      <Input 
+                        id="lifeInsuranceFaceValue" 
+                        name="lifeInsuranceFaceValue" 
+                        type="text" 
+                        value={formData.lifeInsuranceFaceValue} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lifeInsuranceCashValue">Life Insurance - Cash Surrender Value</Label>
+                      <Input 
+                        id="lifeInsuranceCashValue" 
+                        name="lifeInsuranceCashValue" 
+                        type="text" 
+                        value={formData.lifeInsuranceCashValue} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
                     </div>
                   </div>
 
-                  <div className="flex justify-between">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setActiveTab("income")}
-                    >
-                      Previous: Income
-                    </Button>
-                    <Button 
-                      type="button" 
-                      className="bg-shield-teal hover:bg-shield-teal/90"
-                      onClick={() => setActiveTab("assets")}
-                    >
-                      Next: Assets
-                    </Button>
-                  </div>
-                </TabsContent>
+                  {/* Primary Residence */}
+                  <h3 className="text-lg font-medium mb-4">Primary Residence Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="homeValue">Estimated Value of Home</Label>
+                      <Input 
+                        id="homeValue" 
+                        name="homeValue" 
+                        type="text" 
+                        value={formData.homeValue} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
 
-                {/* Assets Tab */}
-                <TabsContent value="assets" className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="outstandingMortgage">Outstanding Mortgage (if any)</Label>
+                      <Input 
+                        id="outstandingMortgage" 
+                        name="outstandingMortgage" 
+                        type="text" 
+                        value={formData.outstandingMortgage} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="intentToReturnHome" 
+                        name="intentToReturnHome" 
+                        checked={formData.intentToReturnHome}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, intentToReturnHome: checked as boolean})
+                        } 
+                      />
+                      <Label htmlFor="intentToReturnHome">Intent to Return Home</Label>
+                    </div>
+                  </div>
+
+                  {/* Non-Countable Assets */}
+                  <h3 className="text-lg font-medium mb-4">Non-Countable Assets</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="col-span-1 md:col-span-2">
-                      <h3 className="text-lg font-medium mb-2">Bank Accounts</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="householdProperty">Household Personal Property</Label>
+                      <Input 
+                        id="householdProperty" 
+                        name="householdProperty" 
+                        type="text" 
+                        value={formData.householdProperty} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="checkingApplicant"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Checking Account - Applicant</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="checkingSpouse"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Checking Account - Spouse</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="checkingJoint"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Checking Account - Joint</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="savingsApplicant"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Savings Account - Applicant</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="savingsSpouse"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Savings Account - Spouse</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="savingsJoint"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Savings Account - Joint</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="col-span-1 md:col-span-2 mt-4">
-                      <h3 className="text-lg font-medium mb-2">Other Financial Assets</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="vehicleValue">One Vehicle (Exempt)</Label>
+                      <Input 
+                        id="vehicleValue" 
+                        name="vehicleValue" 
+                        type="text" 
+                        value={formData.vehicleValue} 
+                        onChange={handleInputChange} 
+                        placeholder="$0.00"
+                      />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="moneyMarket"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Money Market Accounts</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="burialPlots" 
+                        name="burialPlots" 
+                        checked={formData.burialPlots}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, burialPlots: checked as boolean})
+                        } 
+                      />
+                      <Label htmlFor="burialPlots">Burial Plots</Label>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
 
-                    <FormField
-                      control={form.control}
-                      name="cds"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Certificates of Deposit (CDs)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="investments"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stocks, Bonds, Mutual Funds</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="retirementAccounts"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Retirement Accounts (IRAs, 401k)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="lifeInsuranceFaceValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Life Insurance - Face Value</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="lifeInsuranceCashValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Life Insurance - Cash Surrender Value</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            This is considered a countable asset
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="col-span-1 md:col-span-2 mt-4">
-                      <h3 className="text-lg font-medium mb-2">Primary Residence</h3>
+          {/* 6. Additional Information */}
+          <AccordionItem value="additional-info" className="border rounded-lg overflow-hidden">
+            <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
+              <h2 className="text-xl font-semibold">6. Additional Information</h2>
+            </AccordionTrigger>
+            <AccordionContent className="p-4">
+              <Card>
+                <CardContent className="pt-6">
+                  {/* Trusts */}
+                  <h3 className="text-lg font-medium mb-4">Trusts and Transfers</h3>
+                  <div className="grid grid-cols-1 gap-6 mb-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="trustInfo">Trust Information</Label>
+                      <Input 
+                        id="trustInfo" 
+                        name="trustInfo" 
+                        value={formData.trustInfo} 
+                        onChange={handleInputChange} 
+                        placeholder="Details about any trust arrangements"
+                      />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="homeValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estimated Value of Home</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="giftsTransfers" 
+                          name="giftsTransfers" 
+                          checked={formData.giftsTransfers}
+                          onCheckedChange={(checked) => 
+                            setFormData({...formData, giftsTransfers: checked as boolean})
+                          } 
+                        />
+                        <Label htmlFor="giftsTransfers">Gifts/Transfers in Past 60 Months</Label>
+                      </div>
+                      {formData.giftsTransfers && (
+                        <div className="mt-2">
+                          <Label htmlFor="giftsDetails">Gift/Transfer Details</Label>
+                          <Input 
+                            id="giftsDetails" 
+                            name="giftsDetails" 
+                            value={formData.giftsDetails} 
+                            onChange={handleInputChange} 
+                            placeholder="Recipient, date, amount, reason"
+                          />
+                        </div>
                       )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="mortgageOutstanding"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Outstanding Mortgage (if any)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="intentToReturnHome"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Intent to Return Home
-                            </FormLabel>
-                            <FormDescription>
-                              Does the applicant intend to return to their primary residence?
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="col-span-1 md:col-span-2 mt-4">
-                      <h3 className="text-lg font-medium mb-2">Non-Countable Assets</h3>
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name="personalProperty"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Household Personal Property</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            Estimated value
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="exemptVehicleValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>One Vehicle (Exempt)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                              <Input 
-                                type="number" 
-                                placeholder="0.00" 
-                                className="pl-7"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="burialPlots"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Burial Plots
-                            </FormLabel>
-                            <FormDescription>
-                              Does the applicant own burial plots?
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
                   </div>
 
-                  <div className="flex justify-between">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setActiveTab("expenses")}
-                    >
-                      Previous: Expenses
-                    </Button>
-                    <Button 
-                      type="button" 
-                      className="bg-shield-teal hover:bg-shield-teal/90"
-                      onClick={() => setActiveTab("additional")}
-                    >
-                      Next: Additional Info
-                    </Button>
-                  </div>
-                </TabsContent>
+                  {/* Legal Documents */}
+                  <h3 className="text-lg font-medium mb-4">Legal Documents</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="powerOfAttorney" 
+                        name="powerOfAttorney" 
+                        checked={formData.powerOfAttorney}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, powerOfAttorney: checked as boolean})
+                        } 
+                      />
+                      <Label htmlFor="powerOfAttorney">Power of Attorney</Label>
+                    </div>
 
-                {/* Additional Info Tab */}
-                <TabsContent value="additional" className="space-y-6">
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="healthcareProxy" 
+                        name="healthcareProxy" 
+                        checked={formData.healthcareProxy}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, healthcareProxy: checked as boolean})
+                        } 
+                      />
+                      <Label htmlFor="healthcareProxy">Healthcare Proxy</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="livingWill" 
+                        name="livingWill" 
+                        checked={formData.livingWill}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, livingWill: checked as boolean})
+                        } 
+                      />
+                      <Label htmlFor="livingWill">Living Will</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="lastWill" 
+                        name="lastWill" 
+                        checked={formData.lastWill}
+                        onCheckedChange={(checked) => 
+                          setFormData({...formData, lastWill: checked as boolean})
+                        } 
+                      />
+                      <Label htmlFor="lastWill">Last Will and Testament</Label>
+                    </div>
+                  </div>
+
+                  {/* Additional Notes */}
+                  <h3 className="text-lg font-medium mb-4">Additional Notes</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="additionalNotes">Other Relevant Information</Label>
+                    <textarea
+                      id="additionalNotes"
                       name="additionalNotes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Additional Notes and Documentation</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Enter any additional relevant information..." 
-                              className="min-h-[200px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Include any other information that might be relevant to the Medicaid planning process.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      value={formData.additionalNotes}
+                      onChange={handleInputChange}
+                      className="w-full min-h-[100px] p-2 border rounded-md"
+                      placeholder="Any other information that may be relevant..."
                     />
                   </div>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
 
-                  <div className="flex justify-between">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setActiveTab("assets")}
-                    >
-                      Previous: Assets
-                    </Button>
-                    <Button 
-                      type="button" 
-                      className="bg-shield-teal hover:bg-shield-teal/90"
-                      onClick={() => setActiveTab("review")}
-                    >
-                      Next: Review
-                    </Button>
+          {/* 7. Review and Submit */}
+          <AccordionItem value="review" className="border rounded-lg overflow-hidden">
+            <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100">
+              <h2 className="text-xl font-semibold">7. Review and Submit</h2>
+            </AccordionTrigger>
+            <AccordionContent className="p-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Form Summary</h3>
+                      <p className="text-gray-600">
+                        Please review all the information you've provided before submitting.
+                        All fields marked with an asterisk (*) are required.
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <div className="mr-2 h-6 w-6 flex items-center justify-center rounded-full bg-green-100 text-green-600">
+                        <Check className="h-4 w-4" />
+                      </div>
+                      <p>All required personal information is complete.</p>
+                    </div>
+                    
+                    <div className="border-t pt-4">
+                      <Button type="submit" className="w-full sm:w-auto">
+                        Submit Medicaid Planning Intake Form
+                      </Button>
+                    </div>
                   </div>
-                </TabsContent>
-
-                {/* Review Tab */}
-                <TabsContent value="review" className="space-y-6">
-                  <div className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Form Review</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value="client-info">
-                            <AccordionTrigger>
-                              <div className="flex items-center">
-                                <User className="mr-2 h-4 w-4" />
-                                <span>Client Information</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Applicant Name</dt>
-                                  <dd>{form.getValues().applicantName || "Not provided"}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Spouse Name</dt>
-                                  <dd>{form.getValues().spouseName || "Not provided"}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Address</dt>
-                                  <dd>
-                                    {form.getValues().streetAddress}, {form.getValues().city}, {form.getValues().state} {form.getValues().zipCode}
-                                  </dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Marital Status</dt>
-                                  <dd>{form.getValues().maritalStatus || "Not provided"}</dd>
-                                </div>
-                              </dl>
-                            </AccordionContent>
-                          </AccordionItem>
-                          
-                          <AccordionItem value="medical-data">
-                            <AccordionTrigger>
-                              <div className="flex items-center">
-                                <Heart className="mr-2 h-4 w-4" />
-                                <span>Medical Data</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Primary Diagnosis</dt>
-                                  <dd>{form.getValues().primaryDiagnosis || "Not provided"}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Facility Name</dt>
-                                  <dd>{form.getValues().facilityName || "Not provided"}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Medical Status</dt>
-                                  <dd>{form.getValues().medicalStatus || "Not provided"}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Long-Term Care Insurance</dt>
-                                  <dd>{form.getValues().longTermCareInsurance ? "Yes" : "No"}</dd>
-                                </div>
-                              </dl>
-                            </AccordionContent>
-                          </AccordionItem>
-                          
-                          <AccordionItem value="income">
-                            <AccordionTrigger>
-                              <div className="flex items-center">
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                <span>Monthly Income</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Social Security (Applicant)</dt>
-                                  <dd>${form.getValues().applicantSocialSecurity?.toFixed(2) || "0.00"}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Social Security (Spouse)</dt>
-                                  <dd>${form.getValues().spouseSocialSecurity?.toFixed(2) || "0.00"}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Total Monthly Income</dt>
-                                  <dd className="font-medium">${calculateTotalIncome().toFixed(2)}</dd>
-                                </div>
-                              </dl>
-                            </AccordionContent>
-                          </AccordionItem>
-                          
-                          <AccordionItem value="expenses">
-                            <AccordionTrigger>
-                              <div className="flex items-center">
-                                <Building className="mr-2 h-4 w-4" />
-                                <span>Monthly Expenses</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Shelter Expenses</dt>
-                                  <dd>${calculateShelterExpenses().toFixed(2)}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Non-Shelter Expenses</dt>
-                                  <dd>${calculateNonShelterExpenses().toFixed(2)}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Total Monthly Expenses</dt>
-                                  <dd className="font-medium">${calculateTotalExpenses().toFixed(2)}</dd>
-                                </div>
-                              </dl>
-                            </AccordionContent>
-                          </AccordionItem>
-                          
-                          <AccordionItem value="assets">
-                            <AccordionTrigger>
-                              <div className="flex items-center">
-                                <Car className="mr-2 h-4 w-4" />
-                                <span>Assets</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Home Value</dt>
-                                  <dd>${form.getValues().homeValue?.toFixed(2) || "0.00"}</dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Checking Accounts (Total)</dt>
-                                  <dd>
-                                    ${(
-                                      (form.getValues().checkingApplicant || 0) + 
-                                      (form.getValues().checkingSpouse || 0) + 
-                                      (form.getValues().checkingJoint || 0)
-                                    ).toFixed(2)}
-                                  </dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Savings Accounts (Total)</dt>
-                                  <dd>
-                                    ${(
-                                      (form.getValues().savingsApplicant || 0) + 
-                                      (form.getValues().savingsSpouse || 0) + 
-                                      (form.getValues().savingsJoint || 0)
-                                    ).toFixed(2)}
-                                  </dd>
-                                </div>
-                                <div>
-                                  <dt className="text-sm font-medium text-gray-500">Investments</dt>
-                                  <dd>${form.getValues().investments?.toFixed(2) || "0.00"}</dd>
-                                </div>
-                              </dl>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setActiveTab("additional")}
-                    >
-                      Previous: Additional Info
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      className="bg-shield-teal hover:bg-shield-teal/90"
-                    >
-                      Submit Form
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </form>
     </div>
   );
 };
