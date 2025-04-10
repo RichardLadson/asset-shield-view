@@ -1,14 +1,14 @@
 
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-import AssetInput from "../components/inputs/AssetInput";
+import MedicaidIntakeForm from "../components/inputs/MedicaidIntakeForm";
 
 const AssetInputPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow bg-gray-50">
-        <AssetInput />
+        <MedicaidIntakeForm />
       </main>
       <Footer />
     </div>
