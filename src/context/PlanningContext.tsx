@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -107,7 +108,12 @@ export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) 
   const [reportData, setReportData] = useState<any | null>(null);
 
   const assessEligibility = async () => {
-    if (!clientInfo || !assets || !income) return;
+    if (!clientInfo || !assets || !income) {
+      console.error("Missing required data for eligibility assessment:", { 
+        clientInfo, assets, income, state: clientInfo?.state || state 
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -141,7 +147,12 @@ export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) 
   };
 
   const generatePlan = async (planType: string = 'comprehensive') => {
-    if (!clientInfo || !assets || !income) return;
+    if (!clientInfo || !assets || !income) {
+      console.error("Missing required data for plan generation:", { 
+        clientInfo, assets, income, state: clientInfo?.state || state 
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -153,7 +164,6 @@ export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) 
         medicalInfo: medicalInfo,
         livingInfo: livingInfo,
         state: clientInfo.state || state,
-        // Adding planType as a direct property with type assertion to match the API expectations
       } as any); // Using type assertion to bypass strict typing for now
 
       setPlanningResults(data);
@@ -183,7 +193,6 @@ export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) 
     setLoading(true);
     try {
       // Ensure reportType is one of the allowed values by using type assertion
-      // Only pass the parameters expected by the API according to its interface definition
       const { data } = await api.report.generateReport({
         clientInfo: clientInfo,
         planningResults: planningResults,

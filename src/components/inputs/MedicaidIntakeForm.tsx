@@ -257,7 +257,16 @@ const MedicaidIntakeForm = () => {
   };
 
   const updateContextFromFormData = () => {
-    // Update client info
+    // Log the values before updating context to verify what's being passed
+    console.log("Updating context with form values:", {
+      name: formData.applicantName,
+      age: formData.applicantBirthDate 
+        ? calculateAge(formData.applicantBirthDate)
+        : 0,
+      state: formData.state
+    });
+    
+    // Update client info - Ensure we're capturing the correct values from the form
     setClientInfo({
       name: formData.applicantName,
       age: formData.applicantBirthDate 
@@ -407,34 +416,37 @@ const MedicaidIntakeForm = () => {
     // Update context with form data
     updateContextFromFormData();
     
-    // Log what was sent to context
-    console.log("Updated context data:", {
-      clientInfo,
-      assets,
-      income,
-      state
-    });
-    
-    // Show toast notification
-    toast({
-      title: "Form Submitted",
-      description: "Your Medicaid Planning information has been saved successfully.",
-    });
-    
-    try {
-      // Generate an eligibility assessment
-      await assessEligibility();
-      
-      // Generate a comprehensive plan
-      await generatePlan('comprehensive');
-    } catch (error) {
-      console.error("Error during form submission:", error);
-      toast({
-        title: "Error",
-        description: "There was an error submitting your information. Please try again.",
-        variant: "destructive",
+    // Wait for state updates to propagate before proceeding
+    setTimeout(async () => {
+      // Log what was sent to context
+      console.log("Updated context data after timeout:", {
+        clientInfo,
+        assets,
+        income,
+        state
       });
-    }
+      
+      // Show toast notification
+      toast({
+        title: "Form Submitted",
+        description: "Your Medicaid Planning information has been saved successfully.",
+      });
+      
+      try {
+        // Generate an eligibility assessment
+        await assessEligibility();
+        
+        // Generate a comprehensive plan
+        await generatePlan('comprehensive');
+      } catch (error) {
+        console.error("Error during form submission:", error);
+        toast({
+          title: "Error",
+          description: "There was an error submitting your information. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }, 100);
   };
 
   return (
