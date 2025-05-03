@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,7 +9,7 @@ import AssetInputPage from "./pages/AssetInputPage";
 import ResultsPage from "./pages/ResultsPage";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
-import PlanningProvider from "./context/PlanningContext";
+import { PlanningProvider } from "./context/PlanningContext";
 
 const queryClient = new QueryClient();
 

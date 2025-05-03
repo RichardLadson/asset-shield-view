@@ -37,8 +37,14 @@ interface PlanningContextProps {
   setEligibilityResults: Dispatch<SetStateAction<any | null>>;
   loading: boolean;
   setLoading: Dispatch<SetStateAction<boolean>>;
+  state: string;
+  setState: Dispatch<SetStateAction<string>>;
+  reportData: any | null;
+  setReportData: Dispatch<SetStateAction<any | null>>;
   assessEligibility: () => Promise<void>;
   runComprehensivePlanning: () => Promise<void>;
+  generatePlan: (planType: string) => Promise<void>;
+  generateReport: (reportType: string, format: string) => Promise<void>;
 }
 
 // Create a context with a default value (null for non-primitive types)
@@ -61,8 +67,14 @@ const PlanningContext = createContext<PlanningContextProps>({
   setEligibilityResults: () => {},
   loading: false,
   setLoading: () => {},
+  state: "",
+  setState: () => {},
+  reportData: null,
+  setReportData: () => {},
   assessEligibility: async () => {},
   runComprehensivePlanning: async () => {},
+  generatePlan: async () => {},
+  generateReport: async () => {},
 });
 
 // Create a provider component
@@ -70,7 +82,7 @@ interface PlanningProviderProps {
   children: ReactNode;
 }
 
-const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
+export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [assets, setAssets] = useState<Assets | null>(null);
   const [income, setIncome] = useState<Income | null>(null);
@@ -78,10 +90,10 @@ const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
   const [medicalInfo, setMedicalInfo] = useState<MedicalInfo | null>(null);
   const [livingInfo, setLivingInfo] = useState<LivingInfo | null>(null);
   const [planningResults, setPlanningResults] = useState<any | null>(null);
-  const [eligibilityResults, setEligibilityResults] = useState<any | null>(
-    null
-  );
+  const [eligibilityResults, setEligibilityResults] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [state, setState] = useState<string>("");
+  const [reportData, setReportData] = useState<any | null>(null);
 
   const assessEligibility = async () => {
     if (!clientInfo || !assets || !income) return;
@@ -91,7 +103,7 @@ const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
       const { data } = await api.eligibility.assessEligibility({
         assets: assets,
         income: income,
-        state: clientInfo.state,
+        state: clientInfo.state || state,
         maritalStatus: clientInfo.maritalStatus,
         age: clientInfo.age,
         healthStatus: clientInfo.healthStatus,
@@ -117,7 +129,7 @@ const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
     }
   };
 
-  const runComprehensivePlanning = async () => {
+  const generatePlan = async (planType: string = 'comprehensive') => {
     if (!clientInfo || !assets || !income) return;
 
     setLoading(true);
@@ -129,22 +141,63 @@ const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
         expenses: expenses,
         medicalInfo: medicalInfo,
         livingInfo: livingInfo,
-        state: clientInfo.state,
+        state: clientInfo.state || state,
+        planType: planType,
       });
 
       setPlanningResults(data);
       toast({
-        title: "Comprehensive Plan Generated",
-        description: "Your comprehensive plan has been successfully generated.",
+        title: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan Generated`,
+        description: `Your ${planType} plan has been successfully generated.`,
       });
     } catch (error: any) {
-      console.error("Comprehensive Planning Error:", error);
+      console.error(`${planType} Planning Error:`, error);
       toast({
         variant: "destructive",
         title: "Error",
         description:
           error?.message ||
-          "Failed to generate comprehensive plan. Please try again later.",
+          `Failed to generate ${planType} plan. Please try again later.`,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runComprehensivePlanning = async () => {
+    await generatePlan('comprehensive');
+  };
+
+  const generateReport = async (reportType: string = 'detailed', format: string = 'pdf') => {
+    setLoading(true);
+    try {
+      const { data } = await api.reports.generateReport({
+        clientInfo: clientInfo,
+        assets: assets,
+        income: income,
+        expenses: expenses,
+        medicalInfo: medicalInfo,
+        livingInfo: livingInfo,
+        eligibilityResults: eligibilityResults,
+        planningResults: planningResults,
+        reportType: reportType,
+        format: format
+      });
+
+      setReportData(data);
+      toast({
+        title: "Report Generated",
+        description: `Your ${reportType} report has been successfully generated.`,
+      });
+      return data;
+    } catch (error: any) {
+      console.error("Report Generation Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error?.message ||
+          "Failed to generate report. Please try again later.",
       });
     } finally {
       setLoading(false);
@@ -170,8 +223,14 @@ const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
     setEligibilityResults,
     loading,
     setLoading,
+    state,
+    setState,
+    reportData,
+    setReportData,
     assessEligibility,
     runComprehensivePlanning,
+    generatePlan,
+    generateReport,
   };
 
   return (
@@ -182,12 +241,13 @@ const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
 };
 
 // Create a custom hook to use the context
-const usePlanning = () => {
+export const usePlanningContext = () => {
   const context = useContext(PlanningContext);
   if (!context) {
-    throw new Error("usePlanning must be used within a PlanningProvider");
+    throw new Error("usePlanningContext must be used within a PlanningProvider");
   }
   return context;
 };
 
-export { PlanningProvider, usePlanning };
+// Keep the old function name as an alias for backward compatibility
+export const usePlanning = usePlanningContext;
