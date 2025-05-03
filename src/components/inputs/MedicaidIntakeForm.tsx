@@ -155,11 +155,12 @@ const MedicaidIntakeForm = () => {
 
   // Sync form data with context
   useEffect(() => {
-    if (clientInfo.name) {
+    // Make sure clientInfo is not null before accessing its properties
+    if (clientInfo && clientInfo.name) {
       setFormData(prev => ({
         ...prev,
         applicantName: clientInfo.name,
-        maritalStatus: clientInfo.maritalStatus
+        maritalStatus: clientInfo.maritalStatus || ""
       }));
     }
 
@@ -213,10 +214,10 @@ const MedicaidIntakeForm = () => {
 
     // Update context marital status
     if (name === "maritalStatus") {
-      setClientInfo({
-        ...clientInfo,
+      setClientInfo(prevClientInfo => ({
+        ...prevClientInfo!,
         maritalStatus: value
-      });
+      }));
     }
   };
 
@@ -236,10 +237,10 @@ const MedicaidIntakeForm = () => {
         age--;
       }
 
-      setClientInfo({
-        ...clientInfo,
+      setClientInfo(prevClientInfo => ({
+        ...prevClientInfo!,
         age
-      });
+      }));
     }
   };
 
@@ -265,7 +266,8 @@ const MedicaidIntakeForm = () => {
       maritalStatus: formData.maritalStatus,
       healthStatus: formData.medicalStatus,
       email: formData.email,
-      phone: formData.cellPhone || formData.homePhone
+      phone: formData.cellPhone || formData.homePhone,
+      state: formData.state
     });
 
     // Update assets with simplified structure
@@ -429,7 +431,7 @@ const MedicaidIntakeForm = () => {
       console.error("Error during form submission:", error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || "There was an error submitting your information. Please try again.",
+        description: "There was an error submitting your information. Please try again.",
         variant: "destructive",
       });
     }

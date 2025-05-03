@@ -83,7 +83,18 @@ interface PlanningProviderProps {
 }
 
 export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
-  const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
+  // Initialize clientInfo with an empty object that matches ClientInfo structure
+  // to prevent "Cannot read properties of null" errors
+  const [clientInfo, setClientInfo] = useState<ClientInfo | null>({
+    name: "",
+    age: 0,
+    maritalStatus: "",
+    healthStatus: "",
+    email: "",
+    phone: "",
+    state: ""
+  });
+  
   const [assets, setAssets] = useState<Assets | null>(null);
   const [income, setIncome] = useState<Income | null>(null);
   const [expenses, setExpenses] = useState<Expenses | null>(null);
