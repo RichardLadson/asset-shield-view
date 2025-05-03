@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/components/results/ResultsDashboard.tsx
+import { useState, useEffect } from "react";
 import { 
   BarChart, 
   Bar, 
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Printer, Share2, DollarSign, Clock, TrendingDown, TrendingUp, Shield } from "lucide-react";
+import { Download, FileText, Printer, Share2, DollarSign, Clock, TrendingDown, TrendingUp, Shield, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -31,85 +32,178 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-// Mock data
-const assetData = [
-  { name: "Real Estate", value: 320000, protected: 300000 },
-  { name: "Bank Accounts", value: 85000, protected: 35000 },
-  { name: "Vehicles", value: 25000, protected: 25000 },
-  { name: "Investments", value: 150000, protected: 110000 },
-];
-
-// Key metrics data
-const keyMetrics = {
-  // Asset metrics
-  assetsAtRisk: 580000,
-  monthlyLTCCost: 9500,
-  monthsUntilDepleted: 61, // 580000 / 9500 = ~61 months
-  protectableAssets: 470000,
-  totalAssetSavings: 470000, // amount protected
-  
-  // Income metrics
-  clientMonthlyIncome: 4200,
-  medicaidIncomeLimit: 2742, // Example 2023 figure for some states (300% of SSI)
-  monthlyIncomeAtRisk: 1458, // Difference between income and limit
-  protectableIncome: 1350, // Example amount that can be protected
-  
-  // Medicaid requirements
-  medicaidAssetLimit: 2000, // Typical single person asset limit
-  assetSpendDownRequired: 578000, // assetsAtRisk - medicaidAssetLimit
-};
+import { usePlanningContext } from "@/context/PlanningContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
-
-const eligibilityData = [
-  { name: "Without Strategy", unprotected: 580000, threshold: 2000 },
-  { name: "With Strategy", unprotected: 110000, threshold: 2000 },
-];
-
-const incomeEligibilityData = [
-  { name: "Without Strategy", income: 4200, threshold: 2742 },
-  { name: "With Strategy", income: 2650, threshold: 2742 },
-];
-
-const strategies = [
-  { 
-    id: 1, 
-    name: "Irrevocable Trust",
-    description: "Transfer assets to an irrevocable trust to remove them from Medicaid countable assets.",
-    pros: ["Assets protected from Medicaid spend-down", "Potentially avoids estate recovery", "Provides legacy planning"],
-    cons: ["Loss of direct control over assets", "5-year look-back period applies", "Cannot modify trust terms"],
-    effectiveness: "High",
-    timing: "Implement at least 5 years before anticipated need"
-  },
-  { 
-    id: 2, 
-    name: "Spousal Transfer",
-    description: "Transfer assets to a community spouse to protect them while qualifying for Medicaid.",
-    pros: ["No look-back period for transfers between spouses", "Community spouse retains control", "Immediate protection"],
-    cons: ["Only applicable if married", "Community spouse subject to resource limits", "State variations in allowances"],
-    effectiveness: "Medium-High",
-    timing: "Can be implemented close to application time"
-  },
-  { 
-    id: 3, 
-    name: "Spend-Down with Exemptions",
-    description: "Strategically spend resources on exempt assets to reduce countable assets.",
-    pros: ["Immediate effect on eligibility", "Retain benefit of assets", "No look-back period concerns"],
-    cons: ["Assets must be used, not preserved", "Limited to specific exempt categories", "May not protect all assets"],
-    effectiveness: "Medium",
-    timing: "Implement before application"
-  }
-];
 
 const ResultsDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  const { 
+    clientInfo,
+    assets,
+    income,
+    expenses,
+    eligibilityResults,
+    planningResults,
+    reportData,
+    isLoading,
+    generateReport
+  } = usePlanningContext();
+
+  // Check if we have results, if not redirect to form
+  useEffect(() => {
+    if (!eligibilityResults && !planningResults) {
+      toast({
+        title: "No Results Available",
+        description: "Please complete the form to see your results.",
+        variant: "destructive",
+      });
+      navigate("/asset-input");
+    }
+  }, [eligibilityResults, planningResults, navigate]);
+
+  // Prepare asset data for charts
+  const assetData = Object.entries(assets?.investments || {})
+    .map(([name, value]) => ({
+      name: formatAssetName(name),
+      value: Number(value) || 0,
+      protected: Math.round((Number(value) || 0) * 0.7) // Example protection calculation
+    }))
+    .concat(
+      Object.entries({
+        checking: (assets?.checking?.applicant || 0) + 
+                 (assets?.checking?.spouse || 0) + 
+                 (assets?.checking?.joint || 0),
+        savings: (assets?.savings?.applicant || 0) + 
+                (assets?.savings?.spouse || 0) + 
+                (assets?.savings?.joint || 0),
+        property: (assets?.property?.homeValue || 0) - 
+                 (assets?.property?.mortgageValue || 0)
+      }).map(([name, value]) => ({
+        name: formatAssetName(name),
+        value: Number(value) || 0,
+        protected: name === 'property' && assets?.property?.intentToReturnHome 
+          ? Number(value) 
+          : Math.round((Number(value) || 0) * 0.5) // Example protection calculation
+      }))
+    )
+    .filter(item => item.value > 0);
+
+  // Format asset names for display
+  function formatAssetName(key: string): string {
+    const nameMap: Record<string, string> = {
+      moneyMarket: "Money Market",
+      cds: "CDs",
+      stocksBonds: "Stocks & Bonds",
+      retirementAccounts: "Retirement",
+      checking: "Bank Accounts",
+      savings: "Savings",
+      property: "Real Estate"
+    };
+    
+    return nameMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
+  }
 
   // Calculate total assets and protected assets
   const totalAssets = assetData.reduce((sum, item) => sum + item.value, 0);
   const totalProtected = assetData.reduce((sum, item) => sum + item.protected, 0);
-  const protectionPercentage = Math.round((totalProtected / totalAssets) * 100);
+  const protectionPercentage = Math.round((totalProtected / totalAssets) * 100) || 0;
+  
+  // Prepare key metrics data based on the results from API
+  const keyMetrics = {
+    // Asset metrics
+    assetsAtRisk: totalAssets,
+    monthlyLTCCost: planningResults?.monthlyCareCost || 9500,
+    monthsUntilDepleted: Math.round(totalAssets / (planningResults?.monthlyCareCost || 9500)),
+    protectableAssets: totalProtected,
+    totalAssetSavings: totalProtected,
+    
+    // Income metrics
+    clientMonthlyIncome: (
+      (income?.socialSecurity?.applicant || 0) + 
+      (income?.pension?.applicant || 0) + 
+      (income?.other?.annuity || 0) + 
+      (income?.other?.rental || 0) + 
+      (income?.other?.investment || 0)
+    ),
+    medicaidIncomeLimit: eligibilityResults?.incomeLimit || 2742,
+    monthlyIncomeAtRisk: Math.max(0, 
+      ((income?.socialSecurity?.applicant || 0) + 
+       (income?.pension?.applicant || 0) + 
+       (income?.other?.annuity || 0) + 
+       (income?.other?.rental || 0) + 
+       (income?.other?.investment || 0)) - 
+      (eligibilityResults?.incomeLimit || 2742)
+    ),
+    protectableIncome: eligibilityResults?.protectableIncome || 1350,
+    
+    // Medicaid requirements
+    medicaidAssetLimit: eligibilityResults?.resourceLimit || 2000,
+    assetSpendDownRequired: Math.max(0, totalAssets - (eligibilityResults?.resourceLimit || 2000)),
+  };
+
+  // Prepare data for eligibility charts
+  const eligibilityData = [
+    { 
+      name: "Without Strategy", 
+      unprotected: keyMetrics.assetsAtRisk, 
+      threshold: keyMetrics.medicaidAssetLimit 
+    },
+    { 
+      name: "With Strategy", 
+      unprotected: keyMetrics.assetsAtRisk - keyMetrics.protectableAssets, 
+      threshold: keyMetrics.medicaidAssetLimit 
+    },
+  ];
+
+  const incomeEligibilityData = [
+    { 
+      name: "Without Strategy", 
+      income: keyMetrics.clientMonthlyIncome, 
+      threshold: keyMetrics.medicaidIncomeLimit 
+    },
+    { 
+      name: "With Strategy", 
+      income: keyMetrics.clientMonthlyIncome - keyMetrics.protectableIncome, 
+      threshold: keyMetrics.medicaidIncomeLimit 
+    },
+  ];
+
+  // Strategies are from the planning results or fallback to mock data
+  const strategies = planningResults?.strategies || [
+    { 
+      id: 1, 
+      name: "Irrevocable Trust",
+      description: "Transfer assets to an irrevocable trust to remove them from Medicaid countable assets.",
+      pros: ["Assets protected from Medicaid spend-down", "Potentially avoids estate recovery", "Provides legacy planning"],
+      cons: ["Loss of direct control over assets", "5-year look-back period applies", "Cannot modify trust terms"],
+      effectiveness: "High",
+      timing: "Implement at least 5 years before anticipated need"
+    },
+    { 
+      id: 2, 
+      name: "Spousal Transfer",
+      description: "Transfer assets to a community spouse to protect them while qualifying for Medicaid.",
+      pros: ["No look-back period for transfers between spouses", "Community spouse retains control", "Immediate protection"],
+      cons: ["Only applicable if married", "Community spouse subject to resource limits", "State variations in allowances"],
+      effectiveness: "Medium-High",
+      timing: "Can be implemented close to application time"
+    },
+    { 
+      id: 3, 
+      name: "Spend-Down with Exemptions",
+      description: "Strategically spend resources on exempt assets to reduce countable assets.",
+      pros: ["Immediate effect on eligibility", "Retain benefit of assets", "No look-back period concerns"],
+      cons: ["Assets must be used, not preserved", "Limited to specific exempt categories", "May not protect all assets"],
+      effectiveness: "Medium",
+      timing: "Implement before application"
+    }
+  ];
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -120,6 +214,59 @@ const ResultsDashboard = () => {
       maximumFractionDigits: 0,
     }).format(value);
   };
+
+  // Generate the PDF report
+  const handleGenerateReport = async (reportType: string = 'detailed') => {
+    try {
+      await generateReport(reportType, 'html');
+      
+      // Check if report data is available
+      if (reportData?.reportId) {
+        // This would open the report in a new tab or download it
+        window.open(`${import.meta.env.VITE_API_URL}/api/reports/download/${reportData.reportId}`, '_blank');
+      } else {
+        toast({
+          title: "Report Ready",
+          description: "Your report has been generated successfully.",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Error",
+        description: "There was an error generating your report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Show loading state while waiting for data
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-16 w-16 text-shield-navy animate-spin mb-4" />
+        <h2 className="text-2xl font-semibold text-shield-navy">Loading your results...</h2>
+        <p className="text-gray-500 mt-2">We're analyzing your information and preparing your personalized plan.</p>
+      </div>
+    );
+  }
+
+  // Show message if no results available
+  if (!eligibilityResults && !planningResults) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Shield className="h-16 w-16 text-shield-navy mb-4" />
+        <h2 className="text-2xl font-semibold text-shield-navy">No Results Available</h2>
+        <p className="text-gray-500 mt-2">Please complete the Medicaid planning intake form to see your results.</p>
+        <Button 
+          className="mt-6 bg-shield-navy hover:bg-shield-navy/90"
+          onClick={() => navigate('/asset-input')}
+        >
+          Go to Intake Form
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -135,7 +282,11 @@ const ResultsDashboard = () => {
             <Printer className="h-4 w-4" />
             <span className="hidden sm:inline">Print</span>
           </Button>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => handleGenerateReport('detailed')}
+          >
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Download</span>
           </Button>
@@ -143,7 +294,10 @@ const ResultsDashboard = () => {
             <Share2 className="h-4 w-4" />
             <span className="hidden sm:inline">Share</span>
           </Button>
-          <Button className="flex items-center gap-2 bg-shield-navy hover:bg-shield-navy/90">
+          <Button 
+            className="flex items-center gap-2 bg-shield-navy hover:bg-shield-navy/90"
+            onClick={() => handleGenerateReport('professional')}
+          >
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Full Report</span>
           </Button>
@@ -257,30 +411,6 @@ const ResultsDashboard = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-shield-navy" />
-              Total Assets
-            </CardTitle>
-            <CardDescription>Current value of all assets</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-shield-navy">{formatCurrency(totalAssets)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Shield className="h-4 w-4 text-shield-teal" />
-              Protected Assets
-            </CardTitle>
-            <CardDescription>With recommended strategies</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-shield-teal">{formatCurrency(totalProtected)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
               <Clock className="h-4 w-4 text-shield-navy" />
               Time Before Assets Depleted
             </CardTitle>
@@ -376,7 +506,7 @@ const ResultsDashboard = () => {
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
-                      <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
+                      <YAxis tickFormatter={(value) => `${value / 1000}k`} />
                       <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                       <Legend />
                       <Bar dataKey="protected" name="Protected" fill="#5BC2A8" />
@@ -506,7 +636,7 @@ const ResultsDashboard = () => {
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
-                      <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
+                      <YAxis tickFormatter={(value) => `${value / 1000}k`} />
                       <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                       <Legend />
                       <Bar dataKey="unprotected" name="Countable Assets" fill="#FF8042" />
@@ -536,7 +666,7 @@ const ResultsDashboard = () => {
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
-                      <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
+                      <YAxis tickFormatter={(value) => `${value / 1000}k`} />
                       <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                       <Legend />
                       <Bar dataKey="income" name="Monthly Income" fill="#FF8042" />

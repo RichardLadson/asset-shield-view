@@ -1,68 +1,198 @@
-
 import React from "react";
 import { Card, CardContent } from "../../ui/card";
-import { Button } from "../../ui/button";
-import { Check, AlertCircle } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
+import { Separator } from "../../ui/separator";
 
 interface ReviewSectionProps {
-  // No specific props needed for this component
+  formData: any;
 }
 
-const ReviewSection: React.FC<ReviewSectionProps> = () => {
-  const [isOpen, setIsOpen] = React.useState(false);
+// Helper for formatting currency
+const formatCurrency = (value: string | number | undefined): string => {
+  if (!value) return "$0.00";
+  const numericValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numericValue)) return "$0.00";
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericValue);
+};
 
+// Helper for formatting dates
+const formatDate = (date: Date | undefined): string => {
+  if (!date) return "Not provided";
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(date);
+};
+
+// Component for section header
+const SectionHeader = ({ title }: { title: string }) => (
+  <h3 className="text-xl font-medium text-shield-navy mb-4 border-b pb-2">{title}</h3>
+);
+
+// Component for info item
+const InfoItem = ({ label, value }: { label: string; value: string | boolean | React.ReactNode }) => (
+  <div className="grid grid-cols-1 md:grid-cols-3 py-2">
+    <div className="font-medium text-gray-700">{label}:</div>
+    <div className="md:col-span-2">{
+      typeof value === 'boolean' 
+        ? (value ? 'Yes' : 'No') 
+        : value || 'Not provided'
+    }</div>
+  </div>
+);
+
+const ReviewSection: React.FC<ReviewSectionProps> = ({ formData }) => {
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-2">Form Summary</h3>
-            <p className="text-gray-600">
-              Please review all the information you've provided before submitting.
-              All fields marked with an asterisk (*) are required.
-            </p>
-          </div>
+        <h3 className="text-2xl font-semibold mb-6 text-center">Review Your Information</h3>
+        <p className="text-gray-600 mb-6 text-center">
+          Please review the information you've provided before submitting the form.
+        </p>
+        
+        {/* Client Information */}
+        <div className="mb-8">
+          <SectionHeader title="Client Information" />
+          <InfoItem label="Client Name" value={formData.applicantName} />
+          <InfoItem label="Spouse Name" value={formData.spouseName} />
+          <InfoItem label="Birth Date" value={formatDate(formData.applicantBirthDate)} />
+          <InfoItem label="Spouse Birth Date" value={formatDate(formData.spouseBirthDate)} />
+          <InfoItem label="Address" 
+            value={`${formData.address || ''}, ${formData.city || ''}, ${formData.state || ''} ${formData.zipCode || ''}`} 
+          />
+          <InfoItem label="Phone" value={formData.cellPhone || formData.homePhone} />
+          <InfoItem label="Email" value={formData.email} />
+          <InfoItem label="Marital Status" value={formData.maritalStatus} />
+          <InfoItem label="Veteran Status" value={formData.veteranStatus} />
+        </div>
+        
+        {/* Medical Data */}
+        <div className="mb-8">
+          <SectionHeader title="Medical Information" />
+          <InfoItem label="Primary Diagnosis" value={formData.primaryDiagnosis} />
+          <InfoItem label="Facility Name" value={formData.facilityName} />
+          <InfoItem label="Facility Entry Date" value={formatDate(formData.facilityEntryDate)} />
+          <InfoItem label="Medical Status" value={formData.medicalStatus} />
+          <InfoItem label="Recent Hospital Stay" value={formData.recentHospitalStay} />
+          {formData.recentHospitalStay && (
+            <InfoItem label="Hospital Stay Duration" value={formData.hospitalStayDuration} />
+          )}
+          <InfoItem label="Long-Term Care Insurance" value={formData.longTermCareInsurance} />
+          {formData.longTermCareInsurance && (
+            <InfoItem label="Insurance Details" value={formData.insuranceDetails} />
+          )}
+        </div>
+        
+        {/* Financial Summary */}
+        <div className="mb-8 bg-slate-50 p-4 rounded-md">
+          <h3 className="text-xl font-medium text-shield-navy mb-4">Financial Summary</h3>
           
-          <div className="flex items-center">
-            <div className="mr-2 h-6 w-6 flex items-center justify-center rounded-full bg-green-100 text-green-600">
-              <Check className="h-4 w-4" />
-            </div>
-            <p>All required personal information is complete.</p>
-          </div>
-
-          <Collapsible
-            open={isOpen}
-            onOpenChange={setIsOpen}
-            className="border rounded-md p-4 bg-slate-50"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="h-5 w-5 text-shield-navy" />
-                <h4 className="text-sm font-medium">Important Submission Information</h4>
+          {/* Income Summary */}
+          <div className="mb-4">
+            <h4 className="font-medium mb-2">Monthly Income:</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Applicant Income:</p>
+                <p className="font-medium">{formatCurrency(formData.applicantIncomeTotal)}</p>
               </div>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  {isOpen ? "Hide Details" : "Show Details"}
-                </Button>
-              </CollapsibleTrigger>
+              <div>
+                <p className="text-sm text-gray-600">Spouse Income:</p>
+                <p className="font-medium">{formatCurrency(formData.spouseIncomeTotal)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Other Income:</p>
+                <p className="font-medium">{formatCurrency(formData.otherIncomeTotal)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 font-semibold">Total Monthly Income:</p>
+                <p className="font-bold text-shield-navy">{formatCurrency(formData.totalMonthlyIncome)}</p>
+              </div>
             </div>
-            <CollapsibleContent className="mt-4 space-y-3 text-sm">
-              <p>By submitting this form, you acknowledge that:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>All information provided is accurate to the best of your knowledge</li>
-                <li>This form will be reviewed by our Medicaid planning specialists</li>
-                <li>A consultation may be scheduled to discuss your eligibility and options</li>
-                <li>You'll receive a detailed analysis of potential strategies to protect your assets</li>
-              </ul>
-            </CollapsibleContent>
-          </Collapsible>
-          
-          <div className="border-t pt-4">
-            <Button type="submit" className="w-full sm:w-auto bg-shield-navy hover:bg-shield-navy/90">
-              Submit Medicaid Planning Intake Form
-            </Button>
           </div>
+          
+          <Separator className="my-4" />
+          
+          {/* Expenses Summary */}
+          <div className="mb-4">
+            <h4 className="font-medium mb-2">Monthly Expenses:</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Housing Expenses:</p>
+                <p className="font-medium">{formatCurrency(formData.housingExpenseTotal)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Personal Expenses:</p>
+                <p className="font-medium">{formatCurrency(formData.personalExpenseTotal)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Medical Expenses:</p>
+                <p className="font-medium">{formatCurrency(formData.medicalExpenseTotal)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 font-semibold">Total Monthly Expenses:</p>
+                <p className="font-bold text-shield-navy">{formatCurrency(formData.totalMonthlyExpenses)}</p>
+              </div>
+            </div>
+          </div>
+          
+          <Separator className="my-4" />
+          
+          {/* Assets Summary */}
+          <div>
+            <h4 className="font-medium mb-2">Assets:</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Bank Accounts:</p>
+                <p className="font-medium">{formatCurrency(formData.totalBankAssets)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Investments:</p>
+                <p className="font-medium">{formatCurrency(formData.totalInvestmentAssets)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Property:</p>
+                <p className="font-medium">{formatCurrency(formData.totalPropertyAssets)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Personal Property:</p>
+                <p className="font-medium">{formatCurrency(formData.totalPersonalAssets)}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-sm text-gray-600 font-semibold">Total Asset Value:</p>
+                <p className="font-bold text-xl text-shield-navy">{formatCurrency(formData.totalAssetValue)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Additional Information */}
+        <div className="mb-6">
+          <SectionHeader title="Additional Information" />
+          <InfoItem label="Trust Information" value={formData.trustInfo} />
+          <InfoItem label="Gifts/Transfers" value={formData.giftsTransfers} />
+          {formData.giftsTransfers && (
+            <InfoItem label="Gift Details" value={formData.giftsDetails} />
+          )}
+          <InfoItem label="Power of Attorney" value={formData.powerOfAttorney} />
+          <InfoItem label="Healthcare Proxy" value={formData.healthcareProxy} />
+          <InfoItem label="Living Will" value={formData.livingWill} />
+          <InfoItem label="Last Will & Testament" value={formData.lastWill} />
+          <InfoItem label="Additional Notes" value={formData.additionalNotes} />
+        </div>
+        
+        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md">
+          <p className="text-sm text-yellow-800">
+            <span className="font-bold">Important:</span> By submitting this form, you confirm that the information 
+            provided is accurate to the best of your knowledge. This information will be used to 
+            assess Medicaid eligibility and develop asset protection strategies. You acknowledge 
+            that Medicaid planning is subject to state-specific regulations and the 5-year look-back period.
+          </p>
         </div>
       </CardContent>
     </Card>
