@@ -32,7 +32,8 @@ const MedicaidIntakeForm = () => {
     handleTextareaChange,
     handleSelectChange,
     handleDateChange,
-    calculateAge
+    calculateAge,
+    setFormData
   } = useMedicaidFormData();
   
   const {
