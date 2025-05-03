@@ -1,12 +1,16 @@
-// src/components/inputs/MedicaidIntakeForm.tsx
-import React, { useState, useEffect } from "react";
+
+import React from "react";
 import { 
   Accordion, 
   AccordionContent, 
   AccordionItem, 
   AccordionTrigger 
 } from "../ui/accordion";
-import { toast } from "@/hooks/use-toast";
+import { Button } from "../ui/button";
+import { Loader2 } from "lucide-react";
+import { usePlanningContext } from "@/context/PlanningContext";
+import { useMedicaidFormData } from "@/hooks/useMedicaidFormData";
+import { useMedicaidFormSubmission } from "@/hooks/useMedicaidFormSubmission";
 import {
   ClientInfoSection,
   MedicalDataSection,
@@ -16,444 +20,37 @@ import {
   AdditionalInfoSection,
   ReviewSection
 } from "./form-sections";
-import { Button } from "../ui/button";
-import { usePlanningContext } from "@/context/PlanningContext";
-import { Loader2 } from "lucide-react";
 
 const MedicaidIntakeForm = () => {
-  const { 
-    clientInfo, 
-    setClientInfo,
-    assets,
-    setAssets,
-    income,
-    setIncome,
-    expenses, 
-    setExpenses,
-    medicalInfo,
-    setMedicalInfo,
-    livingInfo,
-    setLivingInfo,
-    state,
-    setState,
-    loading,
-    assessEligibility,
-    generatePlan
-  } = usePlanningContext();
-
-  const [activeSection, setActiveSection] = useState<string>("client-info");
-  const [formValid, setFormValid] = useState<boolean>(false);
+  const { loading } = usePlanningContext();
   
-  // Map our form data from context to the format expected by form components
-  const [formData, setFormData] = useState({
-    // Client Information
-    clientDate: undefined as Date | undefined,
-    homePhone: "",
-    cellPhone: "",
-    email: "",
-    applicantName: "",
-    spouseName: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    applicantBirthDate: undefined as Date | undefined,
-    spouseBirthDate: undefined as Date | undefined,
-    applicantCitizen: false,
-    spouseCitizen: false,
-    veteranStatus: "",
-    maritalStatus: "",
-    emergencyContactName: "",
-    emergencyContactPhone: "",
-    
-    // Medical Data
-    primaryDiagnosis: "",
-    facilityName: "",
-    facilityEntryDate: undefined as Date | undefined,
-    medicalStatus: "",
-    recentHospitalStay: false,
-    hospitalStayDuration: "",
-    longTermCareInsurance: false,
-    insuranceDetails: "",
-    
-    // Income
-    applicantSocialSecurity: "",
-    spouseSocialSecurity: "",
-    applicantPension: "",
-    spousePension: "",
-    annuityIncome: "",
-    rentalIncome: "",
-    investmentIncome: "",
-    otherIncomeSources: "",
-    applicantIncomeTotal: "0.00",
-    spouseIncomeTotal: "0.00",
-    otherIncomeTotal: "0.00",
-    totalMonthlyIncome: "0.00",
-    
-    // Expenses
-    rentMortgage: "",
-    realEstateTaxes: "",
-    utilities: "",
-    homeownersInsurance: "",
-    housingMaintenance: "",
-    food: "",
-    medicalNonReimbursed: "",
-    healthInsurancePremiums: "",
-    transportation: "",
-    clothing: "",
-    extraordinaryMedical: "",
-    housingExpenseTotal: "0.00",
-    personalExpenseTotal: "0.00",
-    medicalExpenseTotal: "0.00",
-    totalMonthlyExpenses: "0.00",
-    
-    // Assets
-    // Bank accounts - simplified
-    totalChecking: "",
-    totalSavings: "",
-    moneyMarket: "",
-    cds: "",
-    
-    // Investments
-    stocksBonds: "",
-    retirementAccounts: "",
-    
-    // Insurance
-    lifeInsuranceFaceValue: "",
-    lifeInsuranceCashValue: "",
-    
-    // Property
-    homeValue: "",
-    outstandingMortgage: "",
-    otherRealEstate: "",
-    intentToReturnHome: false,
-    
-    // Personal property
-    householdProperty: "",
-    vehicleValue: "",
-    otherAssets: "",
-    burialPlots: false,
-    
-    // Asset totals
-    totalBankAssets: "0.00",
-    totalInvestmentAssets: "0.00",
-    totalInsuranceAssets: "0.00",
-    totalPropertyAssets: "0.00",
-    totalPersonalAssets: "0.00",
-    totalAssetValue: "0.00",
-    
-    // Additional Info
-    trustInfo: "",
-    giftsTransfers: false,
-    giftsDetails: "",
-    powerOfAttorney: false,
-    healthcareProxy: false,
-    livingWill: false,
-    lastWill: false,
-    additionalNotes: ""
-  });
-
-  // Sync form data with context
-  useEffect(() => {
-    // Make sure clientInfo is not null before accessing its properties
-    if (clientInfo && clientInfo.name) {
-      setFormData(prev => ({
-        ...prev,
-        applicantName: clientInfo.name,
-        maritalStatus: clientInfo.maritalStatus || ""
-      }));
-    }
-
-    // Set state value from context
-    if (state) {
-      setFormData(prev => ({
-        ...prev,
-        state
-      }));
-    }
-  }, [clientInfo, state]);
-
-  // Validate form before submission
-  useEffect(() => {
-    // Basic validation - required fields
-    const isValid = 
-      formData.applicantName.trim() !== "" && 
-      formData.state.trim() !== "" &&
-      formData.applicantBirthDate !== undefined &&
-      formData.maritalStatus !== "";
-    
-    setFormValid(isValid);
-  }, [formData]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  };
-
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-
-    // Update context state value
-    if (name === "state") {
-      setState(value);
-    }
-
-    // Update context marital status
-    if (name === "maritalStatus") {
-      setClientInfo(prevClientInfo => ({
-        ...prevClientInfo!,
-        maritalStatus: value
-      }));
-    }
-  };
-
-  const handleDateChange = (name: string, date: Date | undefined) => {
-    setFormData({
-      ...formData,
-      [name]: date,
-    });
-
-    // Handle age calculation if birth date changes
-    if (name === "applicantBirthDate" && date) {
-      const today = new Date();
-      let age = today.getFullYear() - date.getFullYear();
-      const monthDiff = today.getMonth() - date.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
-        age--;
-      }
-
-      setClientInfo(prevClientInfo => ({
-        ...prevClientInfo!,
-        age
-      }));
-    }
-  };
-
-  const calculateAge = (birthDate: Date): number => {
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    
-    return age;
-  };
-
-  const updateContextFromFormData = () => {
-    // Log the values before updating context to verify what's being passed
-    console.log("Updating context with form values:", {
-      name: formData.applicantName,
-      age: formData.applicantBirthDate 
-        ? calculateAge(formData.applicantBirthDate)
-        : 0,
-      state: formData.state
-    });
-    
-    // Update client info - Ensure we're capturing the correct values from the form
-    setClientInfo({
-      name: formData.applicantName,
-      age: formData.applicantBirthDate 
-        ? calculateAge(formData.applicantBirthDate)
-        : 0,
-      maritalStatus: formData.maritalStatus,
-      healthStatus: formData.medicalStatus,
-      email: formData.email,
-      phone: formData.cellPhone || formData.homePhone,
-      state: formData.state
-    });
-
-    // Update assets with simplified structure
-    setAssets({
-      checking: {
-        total: parseFloat(formData.totalChecking) || 0
-      },
-      savings: {
-        total: parseFloat(formData.totalSavings) || 0
-      },
-      investments: {
-        moneyMarket: parseFloat(formData.moneyMarket) || 0,
-        cds: parseFloat(formData.cds) || 0,
-        stocksBonds: parseFloat(formData.stocksBonds) || 0,
-        retirementAccounts: parseFloat(formData.retirementAccounts) || 0
-      },
-      lifeInsurance: {
-        faceValue: parseFloat(formData.lifeInsuranceFaceValue) || 0,
-        cashValue: parseFloat(formData.lifeInsuranceCashValue) || 0
-      },
-      property: {
-        homeValue: parseFloat(formData.homeValue) || 0,
-        mortgageValue: parseFloat(formData.outstandingMortgage) || 0,
-        otherRealEstate: parseFloat(formData.otherRealEstate) || 0,
-        intentToReturnHome: formData.intentToReturnHome
-      },
-      exempt: {
-        householdProperty: parseFloat(formData.householdProperty) || 0,
-        vehicleValue: parseFloat(formData.vehicleValue) || 0,
-        burialPlots: formData.burialPlots,
-        otherAssets: parseFloat(formData.otherAssets) || 0
-      },
-      summary: {
-        totalAssetValue: parseFloat(formData.totalAssetValue) || 0
-      }
-    });
-
-    // Update income
-    setIncome({
-      socialSecurity: {
-        applicant: parseFloat(formData.applicantSocialSecurity) || 0,
-        spouse: parseFloat(formData.spouseSocialSecurity) || 0
-      },
-      pension: {
-        applicant: parseFloat(formData.applicantPension) || 0,
-        spouse: parseFloat(formData.spousePension) || 0
-      },
-      other: {
-        annuity: parseFloat(formData.annuityIncome) || 0,
-        rental: parseFloat(formData.rentalIncome) || 0,
-        investment: parseFloat(formData.investmentIncome) || 0,
-        other: formData.otherIncomeSources
-      },
-      summary: {
-        totalMonthlyIncome: parseFloat(formData.totalMonthlyIncome) || 0
-      }
-    });
-
-    // Update expenses
-    setExpenses({
-      housing: {
-        rentMortgage: parseFloat(formData.rentMortgage) || 0,
-        taxes: parseFloat(formData.realEstateTaxes) || 0,
-        utilities: parseFloat(formData.utilities) || 0,
-        insurance: parseFloat(formData.homeownersInsurance) || 0,
-        maintenance: parseFloat(formData.housingMaintenance) || 0,
-        total: parseFloat(formData.housingExpenseTotal) || 0
-      },
-      personal: {
-        food: parseFloat(formData.food) || 0,
-        transportation: parseFloat(formData.transportation) || 0,
-        clothing: parseFloat(formData.clothing) || 0,
-        total: parseFloat(formData.personalExpenseTotal) || 0
-      },
-      medical: {
-        nonReimbursed: parseFloat(formData.medicalNonReimbursed) || 0,
-        premiums: parseFloat(formData.healthInsurancePremiums) || 0,
-        extraordinary: parseFloat(formData.extraordinaryMedical) || 0,
-        total: parseFloat(formData.medicalExpenseTotal) || 0
-      },
-      summary: {
-        totalMonthlyExpenses: parseFloat(formData.totalMonthlyExpenses) || 0
-      }
-    });
-
-    // Update medical info
-    setMedicalInfo({
-      diagnosis: formData.primaryDiagnosis,
-      facility: formData.facilityName,
-      facilityEntryDate: formData.facilityEntryDate,
-      status: formData.medicalStatus,
-      recentHospitalization: formData.recentHospitalStay,
-      hospitalizationDuration: formData.hospitalStayDuration,
-      longTermCareInsurance: formData.longTermCareInsurance,
-      insuranceDetails: formData.insuranceDetails
-    });
-
-    // Update living info
-    setLivingInfo({
-      homeAddress: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`,
-      willReturnHome: formData.intentToReturnHome,
-      emergencyContact: {
-        name: formData.emergencyContactName,
-        phone: formData.emergencyContactPhone
-      }
-    });
-
-    // Update state
-    setState(formData.state);
-  };
+  // Use our custom hooks for form data management and submission
+  const {
+    formData,
+    formValid,
+    handleInputChange,
+    handleTextareaChange,
+    handleSelectChange,
+    handleDateChange,
+    calculateAge
+  } = useMedicaidFormData();
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate required fields
-    if (!formData.applicantName || !formData.state || !formData.applicantBirthDate || !formData.maritalStatus) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill out all required fields (name, birth date, state, and marital status).",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Add console logs to debug form data
-    console.log("Submitting form with data:", {
-      clientInfo: {
-        name: formData.applicantName,
-        age: formData.applicantBirthDate ? calculateAge(formData.applicantBirthDate) : 0,
-        maritalStatus: formData.maritalStatus,
-        state: formData.state
-      },
-      totalAssets: formData.totalAssetValue,
-      totalIncome: formData.totalMonthlyIncome
-    });
-    
-    // Update context with form data
-    updateContextFromFormData();
-    
-    // Wait for state updates to propagate before proceeding
-    setTimeout(async () => {
-      // Log what was sent to context
-      console.log("Updated context data after timeout:", {
-        clientInfo,
-        assets,
-        income,
-        state
-      });
-      
-      // Show toast notification
-      toast({
-        title: "Form Submitted",
-        description: "Your Medicaid Planning information has been saved successfully.",
-      });
-      
-      try {
-        // Generate an eligibility assessment
-        await assessEligibility();
-        
-        // Generate a comprehensive plan
-        await generatePlan('comprehensive');
-      } catch (error) {
-        console.error("Error during form submission:", error);
-        toast({
-          title: "Error",
-          description: "There was an error submitting your information. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }, 100);
+  const {
+    activeSection,
+    setActiveSection,
+    handleSubmit
+  } = useMedicaidFormSubmission();
+  
+  // Create a submission handler that passes our form data
+  const onSubmit = (e: React.FormEvent) => {
+    handleSubmit(e, formData, formValid, calculateAge);
   };
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Medicaid Planning Intake Form</h1>
       
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={onSubmit}>
         <Accordion 
           type="single" 
           collapsible 
