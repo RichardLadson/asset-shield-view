@@ -405,6 +405,14 @@ const MedicaidIntakeForm = () => {
     // Update context with form data
     updateContextFromFormData();
     
+    // Log what was sent to context
+    console.log("Updated context data:", {
+      clientInfo,
+      assets,
+      income,
+      state
+    });
+    
     // Show toast notification
     toast({
       title: "Form Submitted",
@@ -421,7 +429,7 @@ const MedicaidIntakeForm = () => {
       console.error("Error during form submission:", error);
       toast({
         title: "Error",
-        description: "There was an error submitting your information. Please try again.",
+        description: error.response?.data?.message || "There was an error submitting your information. Please try again.",
         variant: "destructive",
       });
     }

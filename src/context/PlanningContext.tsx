@@ -130,15 +130,38 @@ export const PlanningProvider: React.FC<{ children: ReactNode }> = ({ children }
     try {
       setIsLoading(true);
       
+      // Validate required fields before sending
+      if (!clientInfo.name || clientInfo.age === undefined || !clientInfo.maritalStatus || !state) {
+        console.error("Missing required eligibility fields:", { 
+          name: clientInfo.name, 
+          age: clientInfo.age, 
+          maritalStatus: clientInfo.maritalStatus, 
+          state 
+        });
+        
+        toast({
+          title: 'Missing Information',
+          description: 'Required fields missing: name, age, marital status, or state',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Create a proper data structure that matches what the backend expects
       const data = {
-        assets,
-        income,
+        clientInfo: {
+          name: clientInfo.name,
+          age: clientInfo.age,
+          maritalStatus: clientInfo.maritalStatus,
+          healthStatus: clientInfo.healthStatus || 'unknown'
+        },
+        assets: assets, // Make sure this is a complete object, not empty
+        income: income, // Make sure this is a complete object, not empty
+        state: state,
         maritalStatus: clientInfo.maritalStatus,
-        state,
-        age: clientInfo.age,
-        healthStatus: clientInfo.healthStatus,
-        isCrisis: false  // Can be dynamic in the future
       };
+      
+      console.log("Sending eligibility data:", data);
       
       const response = await api.eligibility.assessEligibility(data);
       
@@ -164,7 +187,7 @@ export const PlanningProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.error('Error in assessEligibility:', error);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred',
+        description: error.response?.data?.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
     } finally {
@@ -181,13 +204,55 @@ export const PlanningProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       switch (planType) {
         case 'comprehensive':
+          // Validate required fields for comprehensive planning
+          if (!clientInfo.name || clientInfo.age === undefined || !clientInfo.maritalStatus || !state) {
+            console.error("Missing required planning fields:", { 
+              name: clientInfo.name, 
+              age: clientInfo.age, 
+              maritalStatus: clientInfo.maritalStatus, 
+              state 
+            });
+            
+            toast({
+              title: 'Missing Information',
+              description: 'Required fields missing: name, age, marital status, or state',
+              variant: 'destructive',
+            });
+            return;
+          }
+          
+          // Make sure we have complete objects to send
+          const completeClientInfo = {
+            name: clientInfo.name,
+            age: clientInfo.age,
+            maritalStatus: clientInfo.maritalStatus,
+            healthStatus: clientInfo.healthStatus || 'unknown',
+            email: clientInfo.email || '',
+            phone: clientInfo.phone || ''
+          };
+          
+          // Ensure assets object is not empty
+          const completeAssets = Object.keys(assets).length === 0 ? 
+            { checking: { total: 0 }, savings: { total: 0 } } : assets;
+          
+          // Ensure income object is not empty
+          const completeIncome = Object.keys(income).length === 0 ? 
+            { socialSecurity: { applicant: 0 } } : income;
+            
+          console.log("Sending comprehensive planning data:", {
+            clientInfo: completeClientInfo,
+            assets: completeAssets,
+            income: completeIncome,
+            state
+          });
+          
           response = await api.planning.comprehensivePlanning({
-            clientInfo,
-            assets,
-            income,
-            expenses,
-            medicalInfo,
-            livingInfo,
+            clientInfo: completeClientInfo,
+            assets: completeAssets,
+            income: completeIncome,
+            expenses: expenses || {},
+            medicalInfo: medicalInfo || {},
+            livingInfo: livingInfo || {},
             state,
           });
           break;
@@ -302,7 +367,7 @@ export const PlanningProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.error(`Error in generatePlan (${planType}):`, error);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred',
+        description: error.response?.data?.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
     } finally {
@@ -353,7 +418,7 @@ export const PlanningProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.error('Error in generateReport:', error);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred',
+        description: error.response?.data?.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
     } finally {
