@@ -1,450 +1,157 @@
-// src/context/PlanningContext.tsx
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from "@/hooks/use-toast";
-import api, { 
-  ClientInfo, 
-  Assets, 
-  Income, 
-  Expenses, 
-  MedicalInfo, 
+import React, {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  Dispatch,
+  SetStateAction,
+} from "react";
+import {
+  ClientInfo,
+  Assets,
+  Income,
+  Expenses,
+  MedicalInfo,
   LivingInfo,
-  ApiResponse
-} from '@/services/api';
+} from "@/services/api";
+import api from "@/services/api";
+import { toast } from "@/components/ui/use-toast";
 
-// Define the context state type
-interface PlanningContextState {
-  // Client information
-  clientInfo: ClientInfo;
-  setClientInfo: (info: ClientInfo) => void;
-  
-  // Financial data
-  assets: Assets;
-  setAssets: (assets: Assets) => void;
-  income: Income;
-  setIncome: (income: Income) => void;
-  expenses: Expenses;
-  setExpenses: (expenses: Expenses) => void;
-  
-  // Health and living data
-  medicalInfo: MedicalInfo;
-  setMedicalInfo: (info: MedicalInfo) => void;
-  livingInfo: LivingInfo;
-  setLivingInfo: (info: LivingInfo) => void;
-  
-  // Planning state
-  state: string;
-  setState: (state: string) => void;
-  
-  // Assessment results
-  eligibilityResults: any | null;
+// Define the shape of our context
+interface PlanningContextProps {
+  clientInfo: ClientInfo | null;
+  setClientInfo: Dispatch<SetStateAction<ClientInfo | null>>;
+  assets: Assets | null;
+  setAssets: Dispatch<SetStateAction<Assets | null>>;
+  income: Income | null;
+  setIncome: Dispatch<SetStateAction<Income | null>>;
+  expenses: Expenses | null;
+  setExpenses: Dispatch<SetStateAction<Expenses | null>>;
+  medicalInfo: MedicalInfo | null;
+  setMedicalInfo: Dispatch<SetStateAction<MedicalInfo | null>>;
+  livingInfo: LivingInfo | null;
+  setLivingInfo: Dispatch<SetStateAction<LivingInfo | null>>;
   planningResults: any | null;
-  reportData: any | null;
-  
-  // Loading states
-  isLoading: boolean;
-  
-  // Action methods
+  setPlanningResults: Dispatch<SetStateAction<any | null>>;
+  eligibilityResults: any | null;
+  setEligibilityResults: Dispatch<SetStateAction<any | null>>;
+  loading: boolean;
+  setLoading: Dispatch<SetStateAction<boolean>>;
   assessEligibility: () => Promise<void>;
-  generatePlan: (planType: string) => Promise<void>;
-  generateReport: (reportType: string, outputFormat: string) => Promise<void>;
-  
-  // Reset methods
-  resetForm: () => void;
-  resetResults: () => void;
+  runComprehensivePlanning: () => Promise<void>;
 }
 
-// Create the initial context values
-const initialState: PlanningContextState = {
-  clientInfo: {
-    name: '',
-    age: 0,
-    maritalStatus: 'single',
-  },
+// Create a context with a default value (null for non-primitive types)
+const PlanningContext = createContext<PlanningContextProps>({
+  clientInfo: null,
   setClientInfo: () => {},
-  
-  assets: {},
+  assets: null,
   setAssets: () => {},
-  income: {},
+  income: null,
   setIncome: () => {},
-  expenses: {},
+  expenses: null,
   setExpenses: () => {},
-  
-  medicalInfo: {},
+  medicalInfo: null,
   setMedicalInfo: () => {},
-  livingInfo: {},
+  livingInfo: null,
   setLivingInfo: () => {},
-  
-  state: '',
-  setState: () => {},
-  
-  eligibilityResults: null,
   planningResults: null,
-  reportData: null,
-  
-  isLoading: false,
-  
+  setPlanningResults: () => {},
+  eligibilityResults: null,
+  setEligibilityResults: () => {},
+  loading: false,
+  setLoading: () => {},
   assessEligibility: async () => {},
-  generatePlan: async () => {},
-  generateReport: async () => {},
-  
-  resetForm: () => {},
-  resetResults: () => {},
-};
+  runComprehensivePlanning: async () => {},
+});
 
-// Create the context
-const PlanningContext = createContext<PlanningContextState>(initialState);
+// Create a provider component
+interface PlanningProviderProps {
+  children: ReactNode;
+}
 
-// Create a custom hook to use the context
-export const usePlanningContext = () => useContext(PlanningContext);
-
-// Provider component
-export const PlanningProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const navigate = useNavigate();
-  
-  // State for client info
-  const [clientInfo, setClientInfo] = useState<ClientInfo>(initialState.clientInfo);
-  
-  // State for financial data
-  const [assets, setAssets] = useState<Assets>({});
-  const [income, setIncome] = useState<Income>({});
-  const [expenses, setExpenses] = useState<Expenses>({});
-  
-  // State for health and living info
-  const [medicalInfo, setMedicalInfo] = useState<MedicalInfo>({});
-  const [livingInfo, setLivingInfo] = useState<LivingInfo>({});
-  
-  // State for planning location
-  const [state, setState] = useState<string>('');
-  
-  // State for results
-  const [eligibilityResults, setEligibilityResults] = useState<any | null>(null);
+const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) => {
+  const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
+  const [assets, setAssets] = useState<Assets | null>(null);
+  const [income, setIncome] = useState<Income | null>(null);
+  const [expenses, setExpenses] = useState<Expenses | null>(null);
+  const [medicalInfo, setMedicalInfo] = useState<MedicalInfo | null>(null);
+  const [livingInfo, setLivingInfo] = useState<LivingInfo | null>(null);
   const [planningResults, setPlanningResults] = useState<any | null>(null);
-  const [reportData, setReportData] = useState<any | null>(null);
-  
-  // Loading state
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  
-  // Assess eligibility
+  const [eligibilityResults, setEligibilityResults] = useState<any | null>(
+    null
+  );
+  const [loading, setLoading] = useState<boolean>(false);
+
   const assessEligibility = async () => {
+    if (!clientInfo || !assets || !income) return;
+
+    setLoading(true);
     try {
-      setIsLoading(true);
-      
-      // Validate required fields before sending
-      if (!clientInfo.name || clientInfo.age === undefined || !clientInfo.maritalStatus || !state) {
-        console.error("Missing required eligibility fields:", { 
-          name: clientInfo.name, 
-          age: clientInfo.age, 
-          maritalStatus: clientInfo.maritalStatus, 
-          state 
-        });
-        
-        toast({
-          title: 'Missing Information',
-          description: 'Required fields missing: name, age, marital status, or state',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // Create a proper data structure that matches what the backend expects
-      const data = {
-        clientInfo: {
-          name: clientInfo.name,
-          age: clientInfo.age,
-          maritalStatus: clientInfo.maritalStatus,
-          healthStatus: clientInfo.healthStatus || 'unknown'
-        },
-        assets: assets, // Make sure this is a complete object, not empty
-        income: income, // Make sure this is a complete object, not empty
-        state: state,
+      const { data } = await api.eligibility.assessEligibility({
+        assets: assets,
+        income: income,
+        state: clientInfo.state,
         maritalStatus: clientInfo.maritalStatus,
-      };
-      
-      console.log("Sending eligibility data:", data);
-      
-      const response = await api.eligibility.assessEligibility(data);
-      
-      if (response.status === 'error') {
-        toast({
-          title: 'Error',
-          description: response.message || 'Failed to assess eligibility',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      setEligibilityResults(response);
-      
-      toast({
-        title: 'Success',
-        description: 'Eligibility assessment completed',
+        age: clientInfo.age,
+        healthStatus: clientInfo.healthStatus,
+        isCrisis: clientInfo.isCrisis,
       });
-      
-      // Navigate to results page
-      navigate('/results');
-    } catch (error) {
-      console.error('Error in assessEligibility:', error);
+
+      setEligibilityResults(data);
       toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Eligibility Assessed",
+        description: "Your eligibility has been successfully assessed.",
+      });
+    } catch (error: any) {
+      console.error("Eligibility Assessment Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error?.message ||
+          "Failed to assess eligibility. Please try again later.",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-  
-  // Generate plan
-  const generatePlan = async (planType: string) => {
+
+  const runComprehensivePlanning = async () => {
+    if (!clientInfo || !assets || !income) return;
+
+    setLoading(true);
     try {
-      setIsLoading(true);
-      
-      let response: ApiResponse<any>;
-      
-      switch (planType) {
-        case 'comprehensive':
-          // Validate required fields for comprehensive planning
-          if (!clientInfo.name || clientInfo.age === undefined || !clientInfo.maritalStatus || !state) {
-            console.error("Missing required planning fields:", { 
-              name: clientInfo.name, 
-              age: clientInfo.age, 
-              maritalStatus: clientInfo.maritalStatus, 
-              state 
-            });
-            
-            toast({
-              title: 'Missing Information',
-              description: 'Required fields missing: name, age, marital status, or state',
-              variant: 'destructive',
-            });
-            return;
-          }
-          
-          // Make sure we have complete objects to send
-          const completeClientInfo = {
-            name: clientInfo.name,
-            age: clientInfo.age,
-            maritalStatus: clientInfo.maritalStatus,
-            healthStatus: clientInfo.healthStatus || 'unknown',
-            email: clientInfo.email || '',
-            phone: clientInfo.phone || ''
-          };
-          
-          // Ensure assets object is not empty
-          const completeAssets = Object.keys(assets).length === 0 ? 
-            { checking: { total: 0 }, savings: { total: 0 } } : assets;
-          
-          // Ensure income object is not empty
-          const completeIncome = Object.keys(income).length === 0 ? 
-            { socialSecurity: { applicant: 0 } } : income;
-            
-          console.log("Sending comprehensive planning data:", {
-            clientInfo: completeClientInfo,
-            assets: completeAssets,
-            income: completeIncome,
-            state
-          });
-          
-          response = await api.planning.comprehensivePlanning({
-            clientInfo: completeClientInfo,
-            assets: completeAssets,
-            income: completeIncome,
-            expenses: expenses || {},
-            medicalInfo: medicalInfo || {},
-            livingInfo: livingInfo || {},
-            state,
-          });
-          break;
-          
-        case 'asset':
-          response = await api.planning.assetPlanning({
-            clientInfo,
-            assets,
-            state,
-          });
-          break;
-          
-        case 'income':
-          response = await api.planning.incomePlanning({
-            clientInfo,
-            income,
-            state,
-          });
-          break;
-          
-        case 'trust':
-          if (!eligibilityResults) {
-            toast({
-              title: 'Error',
-              description: 'Eligibility assessment required before trust planning',
-              variant: 'destructive',
-            });
-            return;
-          }
-          
-          response = await api.planning.trustPlanning({
-            clientInfo,
-            assets,
-            income,
-            eligibilityResults,
-            state,
-          });
-          break;
-          
-        case 'annuity':
-          response = await api.planning.annuityPlanning({
-            clientInfo,
-            assets,
-            state,
-          });
-          break;
-          
-        case 'divestment':
-          response = await api.planning.divestmentPlanning({
-            clientInfo,
-            assets,
-            state,
-          });
-          break;
-          
-        case 'care':
-          response = await api.planning.carePlanning({
-            clientInfo,
-            medicalInfo,
-            livingInfo,
-            state,
-          });
-          break;
-          
-        case 'community-spouse':
-          response = await api.planning.communitySpousePlanning({
-            clientInfo,
-            assets,
-            income,
-            expenses,
-            state,
-          });
-          break;
-          
-        case 'post-eligibility':
-          response = await api.planning.postEligibilityPlanning({
-            clientInfo,
-            assets,
-            income,
-            state,
-          });
-          break;
-          
-        default:
-          toast({
-            title: 'Error',
-            description: `Unknown planning type: ${planType}`,
-            variant: 'destructive',
-          });
-          return;
-      }
-      
-      if (response.status === 'error') {
-        toast({
-          title: 'Error',
-          description: response.message || `Failed to generate ${planType} plan`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      setPlanningResults(response);
-      
-      toast({
-        title: 'Success',
-        description: `${planType.charAt(0).toUpperCase() + planType.slice(1)} plan generated successfully`,
+      const { data } = await api.planning.comprehensivePlanning({
+        clientInfo: clientInfo,
+        assets: assets,
+        income: income,
+        expenses: expenses,
+        medicalInfo: medicalInfo,
+        livingInfo: livingInfo,
+        state: clientInfo.state,
       });
-      
-      // Navigate to results page
-      navigate('/results');
-    } catch (error) {
-      console.error(`Error in generatePlan (${planType}):`, error);
+
+      setPlanningResults(data);
       toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Comprehensive Plan Generated",
+        description: "Your comprehensive plan has been successfully generated.",
+      });
+    } catch (error: any) {
+      console.error("Comprehensive Planning Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error?.message ||
+          "Failed to generate comprehensive plan. Please try again later.",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-  
-  // Generate report
-  const generateReport = async (reportType: string = 'summary', outputFormat: string = 'html') => {
-    try {
-      setIsLoading(true);
-      
-      if (!planningResults) {
-        toast({
-          title: 'Error',
-          description: 'Planning results required to generate a report',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      const data = {
-        planningResults,
-        clientInfo,
-        reportType: reportType as 'summary' | 'detailed' | 'professional' | 'client-friendly',
-        outputFormat: outputFormat as 'markdown' | 'plain' | 'html',
-        state,
-      };
-      
-      const response = await api.report.generateReport(data);
-      
-      if (response.status === 'error') {
-        toast({
-          title: 'Error',
-          description: response.message || 'Failed to generate report',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      setReportData(response);
-      
-      toast({
-        title: 'Success',
-        description: 'Report generated successfully',
-      });
-    } catch (error) {
-      console.error('Error in generateReport:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Reset form
-  const resetForm = () => {
-    setClientInfo(initialState.clientInfo);
-    setAssets({});
-    setIncome({});
-    setExpenses({});
-    setMedicalInfo({});
-    setLivingInfo({});
-    setState('');
-  };
-  
-  // Reset results
-  const resetResults = () => {
-    setEligibilityResults(null);
-    setPlanningResults(null);
-    setReportData(null);
-  };
-  
-  const contextValue: PlanningContextState = {
+
+  const value: PlanningContextProps = {
     clientInfo,
     setClientInfo,
     assets,
@@ -457,24 +164,30 @@ export const PlanningProvider: React.FC<{ children: ReactNode }> = ({ children }
     setMedicalInfo,
     livingInfo,
     setLivingInfo,
-    state,
-    setState,
-    eligibilityResults,
     planningResults,
-    reportData,
-    isLoading,
+    setPlanningResults,
+    eligibilityResults,
+    setEligibilityResults,
+    loading,
+    setLoading,
     assessEligibility,
-    generatePlan,
-    generateReport,
-    resetForm,
-    resetResults,
+    runComprehensivePlanning,
   };
-  
+
   return (
-    <PlanningContext.Provider value={contextValue}>
+    <PlanningContext.Provider value={value}>
       {children}
     </PlanningContext.Provider>
   );
 };
 
-export default PlanningProvider;
+// Create a custom hook to use the context
+const usePlanning = () => {
+  const context = useContext(PlanningContext);
+  if (!context) {
+    throw new Error("usePlanning must be used within a PlanningProvider");
+  }
+  return context;
+};
+
+export { PlanningProvider, usePlanning };
