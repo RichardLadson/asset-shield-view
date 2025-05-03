@@ -172,18 +172,13 @@ export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) 
     setLoading(true);
     try {
       // Ensure reportType is one of the allowed values by using type assertion
+      // Only pass the parameters expected by the API according to its interface definition
       const { data } = await api.report.generateReport({
         clientInfo: clientInfo,
-        assets: assets,
-        income: income,
-        expenses: expenses,
-        medicalInfo: medicalInfo,
-        livingInfo: livingInfo,
-        eligibilityResults: eligibilityResults,
         planningResults: planningResults,
-        // Cast reportType to the expected type for the API
         reportType: reportType as "detailed" | "summary" | "professional" | "client-friendly",
-        format: format
+        outputFormat: format as "markdown" | "plain" | "html",
+        state: clientInfo?.state || state
       });
 
       setReportData(data);
