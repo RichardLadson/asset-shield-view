@@ -36,7 +36,7 @@ const MedicaidIntakeForm = () => {
     setLivingInfo,
     state,
     setState,
-    isLoading,
+    loading,
     assessEligibility,
     generatePlan
   } = usePlanningContext();
@@ -376,7 +376,7 @@ const MedicaidIntakeForm = () => {
     // Update state
     setState(formData.state);
   };
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -550,9 +550,9 @@ const MedicaidIntakeForm = () => {
                   <Button 
                     type="submit" 
                     className="w-full sm:w-auto bg-shield-navy hover:bg-shield-navy/90"
-                    disabled={isLoading || !formValid}
+                    disabled={loading || !formValid}
                   >
-                    {isLoading ? (
+                    {loading ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
                     ) : (
                       "Submit Medicaid Planning Form"

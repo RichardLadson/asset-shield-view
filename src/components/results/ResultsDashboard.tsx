@@ -1,3 +1,4 @@
+
 // src/components/results/ResultsDashboard.tsx
 import { useState, useEffect } from "react";
 import { 
@@ -51,7 +52,7 @@ const ResultsDashboard = () => {
     eligibilityResults,
     planningResults,
     reportData,
-    isLoading,
+    loading,
     generateReport
   } = usePlanningContext();
 
@@ -241,7 +242,7 @@ const ResultsDashboard = () => {
   };
 
   // Show loading state while waiting for data
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="h-16 w-16 text-shield-navy animate-spin mb-4" />

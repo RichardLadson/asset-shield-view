@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -142,7 +143,11 @@ export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) 
         medicalInfo: medicalInfo,
         livingInfo: livingInfo,
         state: clientInfo.state || state,
-        planType: planType,
+        // Pass planType separately as it's not part of the type definition
+        // but needed for the API
+        options: {
+          planType: planType
+        }
       });
 
       setPlanningResults(data);
@@ -171,7 +176,7 @@ export const PlanningProvider: React.FC<PlanningProviderProps> = ({ children }) 
   const generateReport = async (reportType: string = 'detailed', format: string = 'pdf') => {
     setLoading(true);
     try {
-      const { data } = await api.reports.generateReport({
+      const { data } = await api.report.generateReport({
         clientInfo: clientInfo,
         assets: assets,
         income: income,
