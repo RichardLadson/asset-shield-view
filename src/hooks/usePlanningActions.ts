@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/api";
+import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/types";
 import api from "@/services/api";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
