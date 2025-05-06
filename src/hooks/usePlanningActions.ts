@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/api";
 import api from "@/services/api";
@@ -64,7 +65,7 @@ export const usePlanningActions = (
       toast({
         variant: "destructive",
         title: "Assessment Error",
-        description: error?.message || "Unable to assess eligibility. Please try again later.",
+        description: error?.message || "Unable to assess eligibility. Please try again later or check your network connection.",
       });
     } finally {
       setLoading(false);
@@ -86,6 +87,16 @@ export const usePlanningActions = (
 
     setLoading(true);
     try {
+      console.log("Sending planning request with data:", {
+        clientInfo,
+        assets,
+        income,
+        expenses,
+        medicalInfo,
+        livingInfo,
+        state: clientInfo.state || state
+      });
+      
       const response = await api.planning.comprehensivePlanning({
         clientInfo: clientInfo,
         assets: assets,
@@ -115,7 +126,7 @@ export const usePlanningActions = (
       toast({
         variant: "destructive",
         title: "Planning Error",
-        description: error?.message || `Unable to generate ${planType} plan. Please try again later.`,
+        description: error?.message || `Unable to generate ${planType} plan. Please check your network connection or try again later.`,
       });
     } finally {
       setLoading(false);
@@ -132,6 +143,14 @@ export const usePlanningActions = (
       if (!clientInfo || !planningResults) {
         throw new Error("Missing client information or planning results required for report generation");
       }
+
+      console.log("Sending report generation request with data:", {
+        clientInfo,
+        planningResults,
+        reportType,
+        outputFormat: format,
+        state: clientInfo?.state || state
+      });
 
       const response = await api.report.generateReport({
         clientInfo: clientInfo,
@@ -157,7 +176,7 @@ export const usePlanningActions = (
       toast({
         variant: "destructive",
         title: "Report Error",
-        description: error?.message || "Unable to generate report. Please try again later.",
+        description: error?.message || "Unable to generate report. Please check your network connection or try again later.",
       });
     } finally {
       setLoading(false);

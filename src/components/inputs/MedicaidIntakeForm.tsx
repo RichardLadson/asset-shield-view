@@ -1,3 +1,4 @@
+
 import React from "react";
 import { 
   Accordion, 
@@ -62,71 +63,95 @@ const MedicaidIntakeForm = () => {
     }
     
     try {
-      // Set the form data in the planning context
+      // Set the client info data in the planning context
       setClientInfo({
-        name: formData.firstName + " " + formData.lastName,
-        age: calculateAge(new Date(formData.dateOfBirth)),
+        name: formData.applicantName,
+        age: calculateAge(formData.applicantBirthDate || new Date()),
         maritalStatus: formData.maritalStatus,
-        healthStatus: formData.healthStatus,
+        healthStatus: formData.medicalStatus,
         email: formData.email,
-        phone: formData.phone,
+        phone: formData.cellPhone || formData.homePhone,
         state: formData.state
       });
       
       // Set income data in context
       setIncome({
-        socialSecurity: parseFloat(formData.monthlySocialSecurity) || 0,
-        pension: parseFloat(formData.monthlyPension) || 0,
-        otherIncome: parseFloat(formData.monthlyOtherIncome) || 0,
+        socialSecurity: {
+          applicant: parseFloat(formData.applicantSocialSecurity) || 0,
+          spouse: parseFloat(formData.spouseSocialSecurity) || 0
+        },
+        pension: {
+          applicant: parseFloat(formData.applicantPension) || 0,
+          spouse: parseFloat(formData.spousePension) || 0
+        },
+        other: {
+          annuity: parseFloat(formData.annuityIncome) || 0,
+          rental: parseFloat(formData.rentalIncome) || 0,
+          investment: parseFloat(formData.investmentIncome) || 0
+        },
         summary: {
-          totalMonthlyIncome: 
-            (parseFloat(formData.monthlySocialSecurity) || 0) +
-            (parseFloat(formData.monthlyPension) || 0) + 
-            (parseFloat(formData.monthlyOtherIncome) || 0)
+          totalMonthlyIncome: parseFloat(formData.totalMonthlyIncome) || 0
         }
       });
       
       // Set assets data in context
       setAssets({
-        primaryResidence: {
-          value: parseFloat(formData.primaryResidenceValue) || 0,
-          mortgage: parseFloat(formData.primaryResidenceMortgage) || 0
+        checking: {
+          total: parseFloat(formData.totalChecking) || 0
         },
-        bankAccounts: {
-          checking: parseFloat(formData.checkingAccountValue) || 0,
-          savings: parseFloat(formData.savingsAccountValue) || 0
+        savings: {
+          total: parseFloat(formData.totalSavings) || 0
         },
         investments: {
-          stocks: parseFloat(formData.stocksValue) || 0,
-          retirement: parseFloat(formData.retirementAccountsValue) || 0
+          moneyMarket: parseFloat(formData.moneyMarket) || 0,
+          cds: parseFloat(formData.cds) || 0,
+          stocksBonds: parseFloat(formData.stocksBonds) || 0,
+          retirementAccounts: parseFloat(formData.retirementAccounts) || 0
+        },
+        property: {
+          homeValue: parseFloat(formData.homeValue) || 0,
+          mortgageValue: parseFloat(formData.outstandingMortgage) || 0,
+          otherRealEstate: parseFloat(formData.otherRealEstate) || 0
         },
         summary: {
-          totalAssetValue: 
-            (parseFloat(formData.primaryResidenceValue) || 0) +
-            (parseFloat(formData.checkingAccountValue) || 0) +
-            (parseFloat(formData.savingsAccountValue) || 0) +
-            (parseFloat(formData.stocksValue) || 0) +
-            (parseFloat(formData.retirementAccountsValue) || 0)
+          totalAssetValue: parseFloat(formData.totalAssetValue) || 0
         }
       });
       
       // Set expenses data in context
+      const housingExpenseTotal = parseFloat(formData.housingExpenseTotal) || 0;
+      const medicalExpenseTotal = parseFloat(formData.medicalExpenseTotal) || 0;
+      const personalExpenseTotal = parseFloat(formData.personalExpenseTotal) || 0;
+      
       setExpenses({
-        housing: parseFloat(formData.monthlyHousingExpense) || 0,
-        medical: parseFloat(formData.monthlyMedicalExpense) || 0,
-        utilities: parseFloat(formData.monthlyUtilitiesExpense) || 0,
-        other: parseFloat(formData.monthlyOtherExpenses) || 0,
+        housing: {
+          rentMortgage: parseFloat(formData.rentMortgage) || 0,
+          taxes: parseFloat(formData.realEstateTaxes) || 0,
+          utilities: parseFloat(formData.utilities) || 0,
+          insurance: parseFloat(formData.homeownersInsurance) || 0,
+          maintenance: parseFloat(formData.housingMaintenance) || 0,
+          total: housingExpenseTotal
+        },
+        personal: {
+          food: parseFloat(formData.food) || 0,
+          transportation: parseFloat(formData.transportation) || 0,
+          clothing: parseFloat(formData.clothing) || 0,
+          total: personalExpenseTotal
+        },
+        medical: {
+          nonReimbursed: parseFloat(formData.medicalNonReimbursed) || 0,
+          premiums: parseFloat(formData.healthInsurancePremiums) || 0,
+          extraordinary: parseFloat(formData.extraordinaryMedical) || 0,
+          total: medicalExpenseTotal
+        },
         summary: {
-          totalMonthlyExpenses:
-            (parseFloat(formData.monthlyHousingExpense) || 0) +
-            (parseFloat(formData.monthlyMedicalExpense) || 0) +
-            (parseFloat(formData.monthlyUtilitiesExpense) || 0) +
-            (parseFloat(formData.monthlyOtherExpenses) || 0)
+          totalMonthlyExpenses: parseFloat(formData.totalMonthlyExpenses) || 0
         }
       });
       
-      // Generate planning results
+      // Generate planning results and navigate to results page
       await generatePlan('comprehensive');
+      navigate('/results');
       
       // Reset validation state
       setShowValidation(false);
@@ -166,7 +191,6 @@ const MedicaidIntakeForm = () => {
                 handleDateChange={handleDateChange}
                 handleSelectChange={handleSelectChange}
                 setFormData={setFormData}
-                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -183,7 +207,6 @@ const MedicaidIntakeForm = () => {
                 handleDateChange={handleDateChange}
                 handleSelectChange={handleSelectChange}
                 setFormData={setFormData}
-                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -198,7 +221,6 @@ const MedicaidIntakeForm = () => {
                 formData={formData}
                 handleInputChange={handleInputChange}
                 setFormData={setFormData}
-                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -213,7 +235,6 @@ const MedicaidIntakeForm = () => {
                 formData={formData}
                 handleInputChange={handleInputChange}
                 setFormData={setFormData}
-                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -228,7 +249,6 @@ const MedicaidIntakeForm = () => {
                 formData={formData}
                 handleInputChange={handleInputChange}
                 setFormData={setFormData}
-                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -244,7 +264,6 @@ const MedicaidIntakeForm = () => {
                 handleInputChange={handleInputChange}
                 handleTextareaChange={handleTextareaChange}
                 setFormData={setFormData}
-                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
