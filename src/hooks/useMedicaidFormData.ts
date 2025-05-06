@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { usePlanningContext } from "@/context/PlanningContext";
+import { toast } from "@/hooks/use-toast";
 
 // Define the form data interface to improve type safety
 export interface MedicaidFormData {
@@ -202,6 +202,7 @@ export const useMedicaidFormData = () => {
   });
   
   const [formValid, setFormValid] = useState<boolean>(false);
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof MedicaidFormData, string>>>({});
 
   // Sync form data with context when it changes
   useEffect(() => {
@@ -225,14 +226,54 @@ export const useMedicaidFormData = () => {
 
   // Validate form data
   useEffect(() => {
-    // Basic validation - required fields
-    const isValid = 
-      formData.applicantName.trim() !== "" && 
-      formData.state.trim() !== "" &&
-      formData.applicantBirthDate !== undefined &&
-      formData.maritalStatus !== "";
-    
+    const errors: Partial<Record<keyof MedicaidFormData, string>> = {};
+
+    // Required fields validation
+    if (!formData.applicantName.trim()) {
+      errors.applicantName = "Applicant name is required";
+    }
+    if (!formData.state.trim()) {
+      errors.state = "State is required";
+    }
+    if (!formData.applicantBirthDate) {
+      errors.applicantBirthDate = "Applicant birth date is required";
+    }
+    if (!formData.maritalStatus) {
+      errors.maritalStatus = "Marital status is required";
+    }
+
+    // Validate totalAssetValue
+    const assetValue = parseFloat(formData.totalAssetValue);
+    if (isNaN(assetValue)) {
+      errors.totalAssetValue = "Total asset value must be a valid number";
+    } else if (assetValue < 0) {
+      errors.totalAssetValue = "Total asset value cannot be negative";
+    }
+
+    // Validate totalMonthlyIncome
+    const monthlyIncome = parseFloat(formData.totalMonthlyIncome);
+    if (isNaN(monthlyIncome)) {
+      errors.totalMonthlyIncome = "Total monthly income must be a valid number";
+    } else if (monthlyIncome < 0) {
+      errors.totalMonthlyIncome = "Total monthly income cannot be negative";
+    }
+
+    setFormErrors(errors);
+
+    // Form is valid if there are no errors
+    const isValid = Object.keys(errors).length === 0;
     setFormValid(isValid);
+
+    // Show toast notifications for errors
+    if (!isValid) {
+      Object.values(errors).forEach(error => {
+        toast({
+          title: "Form Validation Error",
+          description: error,
+          variant: "destructive",
+        });
+      });
+    }
   }, [formData]);
   
   // Handlers for form input changes
@@ -305,6 +346,7 @@ export const useMedicaidFormData = () => {
     formData,
     setFormData,
     formValid,
+    formErrors,
     setFormValid,
     handleInputChange,
     handleTextareaChange,

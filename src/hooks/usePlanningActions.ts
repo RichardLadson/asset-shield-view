@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/api";
 import api from "@/services/api";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast"; // Replace with 'react-toastify' if use-toast is causing issues
 
 export const usePlanningActions = (
   clientInfo: ClientInfo | null,
@@ -20,7 +19,7 @@ export const usePlanningActions = (
 ) => {
   
   const assessEligibility = async () => {
-    if (!clientInfo || !assets || !income) {
+    if (!clientInfo || !assets || !income || !clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
       console.error("Missing required data for eligibility assessment:", { 
         clientInfo, assets, income, state: clientInfo?.state || state 
       });
@@ -29,15 +28,21 @@ export const usePlanningActions = (
 
     setLoading(true);
     try {
-      const { data } = await api.eligibility.assessEligibility({
+      const payload = {
+        clientInfo: {
+          name: clientInfo.name,
+          age: clientInfo.age,
+          maritalStatus: clientInfo.maritalStatus,
+          healthStatus: clientInfo.healthStatus || undefined,
+          isCrisis: clientInfo.isCrisis || false,
+        },
+        state: clientInfo.state || state,
         assets: assets,
         income: income,
-        state: clientInfo.state || state,
-        maritalStatus: clientInfo.maritalStatus,
-        age: clientInfo.age,
-        healthStatus: clientInfo.healthStatus,
-        isCrisis: clientInfo.isCrisis,
-      });
+      };
+      console.log("Sending eligibility assessment payload:", payload);
+
+      const { data } = await api.eligibility.assessEligibility(payload);
 
       setEligibilityResults(data);
       toast({
