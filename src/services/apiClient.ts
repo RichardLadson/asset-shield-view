@@ -4,13 +4,73 @@ import axios from 'axios';
 // Get the API URL from environment variable or use the provided ngrok URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://3f7c-47-149-126-45.ngrok-free.app';
 
+// Log the API URL being used (helpful for debugging)
+console.log(`🔌 API Client: Using API base URL: ${API_BASE_URL}`);
+
+// Check if the API is reachable
+const checkApiConnection = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/health`, { 
+      method: 'HEAD',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log(`🔌 API Client: Connection check ${response.ok ? 'successful' : 'failed'} with status ${response.status}`);
+    return response.ok;
+  } catch (error) {
+    console.error('🔌 API Client: Connection check failed:', error);
+    console.warn('🔌 API Client: If using ngrok, remember that free tier URLs expire after a few hours and need to be updated');
+    return false;
+  }
+};
+
+// Call the check function immediately
+checkApiConnection();
+
 // Create an axios instance with default config
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  // Add timeout to avoid hanging requests
+  timeout: 30000, // 30 seconds
 });
+
+// Add request interceptor for logging
+apiClient.interceptors.request.use(
+  config => {
+    console.log(`🔌 API Client: Sending ${config.method?.toUpperCase()} request to ${config.baseURL}${config.url}`);
+    return config;
+  },
+  error => {
+    console.error('🔌 API Client: Request error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for error handling
+apiClient.interceptors.response.use(
+  response => {
+    console.log(`🔌 API Client: Received response with status ${response.status} from ${response.config.url}`);
+    return response;
+  },
+  error => {
+    if (error.code === 'ECONNABORTED') {
+      console.error('🔌 API Client: Request timed out. Check if your API server is running.');
+    } else if (error.code === 'ERR_NETWORK') {
+      console.error('🔌 API Client: Network error. Check your internet connection and API server.');
+      console.warn('🔌 API Client: If using ngrok, ensure the URL is current and the tunnel is active.');
+    } else if (error.response?.status === 0 || !error.response) {
+      console.error('🔌 API Client: No response from server. CORS issue or server is down.');
+    } else {
+      console.error(`🔌 API Client: Error ${error.response?.status} from ${error.config?.url}:`, error.response?.data || error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Define types for the API responses
 export interface ApiResponse<T> {

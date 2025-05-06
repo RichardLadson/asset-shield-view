@@ -65,6 +65,24 @@ export const eligibilityApi = {
         log("Converting age from string to number:", data.clientInfo.age);
         data.clientInfo.age = Number(data.clientInfo.age);
       }
+
+      // Network connection test before making the actual request
+      log("Testing API connectivity before sending request...");
+      try {
+        const testResponse = await fetch(`${apiClient.defaults.baseURL}/api/health`, { 
+          method: 'HEAD',
+          mode: 'cors',
+        });
+        log(`API connectivity test: ${testResponse.ok ? 'Success' : 'Failed'} (Status: ${testResponse.status})`);
+      } catch (error) {
+        log("❌ API connectivity test failed:", error);
+        log("This suggests the API server is unreachable. Check the following:");
+        log("1. Is the backend server running?");
+        log("2. Is the API URL correct in apiClient.ts?");
+        log("3. If using ngrok, has the URL expired or changed?");
+        log("4. Are there CORS headers configured on the backend?");
+        throw new Error("API server is unreachable. Check console for troubleshooting steps.");
+      }
       
       log("Sending API request to: /api/eligibility/assess");
       const response = await apiClient.post('/api/eligibility/assess', data);
@@ -81,6 +99,15 @@ export const eligibilityApi = {
         };
         
         log("API Error details:", errorDetails);
+
+        // Network or CORS related errors
+        if (!error.response) {
+          log("This appears to be a network error or CORS issue.");
+          log("1. Check that your backend server is running");
+          log("2. Ensure CORS is properly configured on the backend");
+          log("3. If using ngrok, verify the URL is current (they expire after a few hours on free tier)");
+          log("4. Current API URL:", apiClient.defaults.baseURL);
+        }
         
         if (error.response) {
           return error.response.data as ApiResponse<any>;
