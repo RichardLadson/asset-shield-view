@@ -91,7 +91,8 @@ export const useFormSubmitter = () => {
       const eligibilityResponse = await assessEligibility();
       console.log("Eligibility assessment result:", eligibilityResponse);
       
-      if (!eligibilityResponse) {
+      // Check if eligibility assessment was successful
+      if (eligibilityResponse === null || eligibilityResponse === undefined) {
         throw new Error("Eligibility assessment failed. Please try again.");
       }
       
@@ -100,7 +101,8 @@ export const useFormSubmitter = () => {
       const planResponse = await generatePlan('comprehensive');
       console.log("Plan generation result:", planResponse);
       
-      if (!planResponse) {
+      // Check if plan generation was successful
+      if (planResponse === null || planResponse === undefined) {
         throw new Error("Plan generation failed. Please try again.");
       }
       
