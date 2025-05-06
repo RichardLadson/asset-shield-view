@@ -10,6 +10,7 @@ console.log(`🔌 API Client: Using API base URL: ${API_BASE_URL}`);
 // Check if the API is reachable
 const checkApiConnection = async () => {
   try {
+    // Use options that show the potential CORS issue more clearly
     const response = await fetch(`${API_BASE_URL}/api/health`, { 
       method: 'HEAD',
       mode: 'cors',
@@ -21,7 +22,17 @@ const checkApiConnection = async () => {
     return response.ok;
   } catch (error) {
     console.error('🔌 API Client: Connection check failed:', error);
-    console.warn('🔌 API Client: If using ngrok, remember that free tier URLs expire after a few hours and need to be updated');
+    
+    // Check if this is likely a CORS issue
+    if (error.toString().includes('CORS')) {
+      console.error('🔌 API Client: CORS ERROR DETECTED! Your backend server needs configuration changes:');
+      console.error('1. Update your server to allow requests from: ' + window.location.origin);
+      console.error('2. Current allowed origin appears to be: http://localhost:8080');
+      console.error('3. Add this to your server: res.header("Access-Control-Allow-Origin", "' + window.location.origin + '")');
+    } else {
+      console.warn('🔌 API Client: If using ngrok, remember that free tier URLs expire after a few hours and need to be updated');
+    }
+    
     return false;
   }
 };
@@ -63,6 +74,11 @@ apiClient.interceptors.response.use(
     } else if (error.code === 'ERR_NETWORK') {
       console.error('🔌 API Client: Network error. Check your internet connection and API server.');
       console.warn('🔌 API Client: If using ngrok, ensure the URL is current and the tunnel is active.');
+    } else if (error.message?.includes('Network Error') || error.message?.includes('CORS')) {
+      console.error('🔌 API Client: CORS ERROR DETECTED! Your backend server needs configuration changes:');
+      console.error('1. Update your server to allow requests from: ' + window.location.origin);
+      console.error('2. Current allowed origin may be limited to: http://localhost:8080');
+      console.error(`3. Add this to your server: res.header("Access-Control-Allow-Origin", "${window.location.origin}")`);
     } else if (error.response?.status === 0 || !error.response) {
       console.error('🔌 API Client: No response from server. CORS issue or server is down.');
     } else {
@@ -78,5 +94,9 @@ export interface ApiResponse<T> {
   message?: string;
   [key: string]: any;
 }
+
+// Provide CORS debugging info for the developer
+console.info(`🔌 API Client: Your frontend origin is: ${window.location.origin}`);
+console.info('🔌 API Client: Backend server must include this header: Access-Control-Allow-Origin: ' + window.location.origin);
 
 export default apiClient;
