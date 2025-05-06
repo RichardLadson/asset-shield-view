@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { usePlanningContext } from "@/context/PlanningContext";
 import { useMedicaidFormData } from "@/hooks/useMedicaidFormData";
 import { useMedicaidFormSubmission } from "@/hooks/useMedicaidFormSubmission";
+import { useNavigate } from "react-router-dom";
 import {
   ClientInfoSection,
   MedicalDataSection,
@@ -20,9 +21,11 @@ import {
   AdditionalInfoSection,
   ReviewSection
 } from "./form-sections";
+import { toast } from "@/hooks/use-toast";
 
 const MedicaidIntakeForm = () => {
-  const { loading } = usePlanningContext();
+  const { loading, setClientInfo, setIncome, setAssets, setExpenses, generatePlan } = usePlanningContext();
+  const navigate = useNavigate();
   
   // Use our custom hooks for form data management and submission
   const {
@@ -41,12 +44,102 @@ const MedicaidIntakeForm = () => {
   const {
     activeSection,
     setActiveSection,
-    handleSubmit
   } = useMedicaidFormSubmission();
   
   // Create a submission handler that passes our form data
-  const onSubmit = (e: React.FormEvent) => {
-    handleSubmit(e, formData, formValid, calculateAge, setShowValidation);
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Only show validation errors when the form is submitted
+    setShowValidation(true);
+    
+    if (!formValid) {
+      toast({
+        variant: "destructive",
+        title: "Form Error",
+        description: "Please complete all required fields before submitting."
+      });
+      return;
+    }
+    
+    try {
+      // Set the form data in the planning context
+      setClientInfo({
+        name: formData.firstName + " " + formData.lastName,
+        age: calculateAge(new Date(formData.dateOfBirth)),
+        maritalStatus: formData.maritalStatus,
+        healthStatus: formData.healthStatus,
+        email: formData.email,
+        phone: formData.phone,
+        state: formData.state
+      });
+      
+      // Set income data in context
+      setIncome({
+        socialSecurity: parseFloat(formData.monthlySocialSecurity) || 0,
+        pension: parseFloat(formData.monthlyPension) || 0,
+        otherIncome: parseFloat(formData.monthlyOtherIncome) || 0,
+        summary: {
+          totalMonthlyIncome: 
+            (parseFloat(formData.monthlySocialSecurity) || 0) +
+            (parseFloat(formData.monthlyPension) || 0) + 
+            (parseFloat(formData.monthlyOtherIncome) || 0)
+        }
+      });
+      
+      // Set assets data in context
+      setAssets({
+        primaryResidence: {
+          value: parseFloat(formData.primaryResidenceValue) || 0,
+          mortgage: parseFloat(formData.primaryResidenceMortgage) || 0
+        },
+        bankAccounts: {
+          checking: parseFloat(formData.checkingAccountValue) || 0,
+          savings: parseFloat(formData.savingsAccountValue) || 0
+        },
+        investments: {
+          stocks: parseFloat(formData.stocksValue) || 0,
+          retirement: parseFloat(formData.retirementAccountsValue) || 0
+        },
+        summary: {
+          totalAssetValue: 
+            (parseFloat(formData.primaryResidenceValue) || 0) +
+            (parseFloat(formData.checkingAccountValue) || 0) +
+            (parseFloat(formData.savingsAccountValue) || 0) +
+            (parseFloat(formData.stocksValue) || 0) +
+            (parseFloat(formData.retirementAccountsValue) || 0)
+        }
+      });
+      
+      // Set expenses data in context
+      setExpenses({
+        housing: parseFloat(formData.monthlyHousingExpense) || 0,
+        medical: parseFloat(formData.monthlyMedicalExpense) || 0,
+        utilities: parseFloat(formData.monthlyUtilitiesExpense) || 0,
+        other: parseFloat(formData.monthlyOtherExpenses) || 0,
+        summary: {
+          totalMonthlyExpenses:
+            (parseFloat(formData.monthlyHousingExpense) || 0) +
+            (parseFloat(formData.monthlyMedicalExpense) || 0) +
+            (parseFloat(formData.monthlyUtilitiesExpense) || 0) +
+            (parseFloat(formData.monthlyOtherExpenses) || 0)
+        }
+      });
+      
+      // Generate planning results
+      await generatePlan('comprehensive');
+      
+      // Reset validation state
+      setShowValidation(false);
+      
+    } catch (error: any) {
+      console.error("Form submission error:", error);
+      toast({
+        variant: "destructive",
+        title: "Submission Error",
+        description: error?.message || "An error occurred while processing your information."
+      });
+    }
   };
 
   return (
@@ -74,6 +167,7 @@ const MedicaidIntakeForm = () => {
                 handleDateChange={handleDateChange}
                 handleSelectChange={handleSelectChange}
                 setFormData={setFormData}
+                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -90,6 +184,7 @@ const MedicaidIntakeForm = () => {
                 handleDateChange={handleDateChange}
                 handleSelectChange={handleSelectChange}
                 setFormData={setFormData}
+                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -104,6 +199,7 @@ const MedicaidIntakeForm = () => {
                 formData={formData}
                 handleInputChange={handleInputChange}
                 setFormData={setFormData}
+                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -118,6 +214,7 @@ const MedicaidIntakeForm = () => {
                 formData={formData}
                 handleInputChange={handleInputChange}
                 setFormData={setFormData}
+                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -132,6 +229,7 @@ const MedicaidIntakeForm = () => {
                 formData={formData}
                 handleInputChange={handleInputChange}
                 setFormData={setFormData}
+                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -147,6 +245,7 @@ const MedicaidIntakeForm = () => {
                 handleInputChange={handleInputChange}
                 handleTextareaChange={handleTextareaChange}
                 setFormData={setFormData}
+                showValidation={showValidation}
               />
             </AccordionContent>
           </AccordionItem>
@@ -164,7 +263,7 @@ const MedicaidIntakeForm = () => {
                   <Button 
                     type="submit" 
                     className="w-full sm:w-auto bg-shield-navy hover:bg-shield-navy/90"
-                    disabled={loading || !formValid}
+                    disabled={loading}
                   >
                     {loading ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
