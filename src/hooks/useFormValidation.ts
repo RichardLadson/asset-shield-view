@@ -16,11 +16,8 @@ export const useFormValidation = (
     const errors: Partial<Record<keyof MedicaidFormData, string>> = {};
 
     // Required fields validation
-    if (!formData.firstName.trim()) {
-      errors.firstName = "First name is required";
-    }
-    if (!formData.lastName.trim()) {
-      errors.lastName = "Last name is required";
+    if (!formData.applicantName.trim()) {
+      errors.applicantName = "Full name is required";
     }
     if (!formData.state.trim()) {
       errors.state = "State is required";

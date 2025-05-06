@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { MedicaidFormData } from "@/types/medicaidForm";
 import { usePlanningContext } from "@/context/PlanningContext";
@@ -21,9 +20,7 @@ export const useContextUpdater = () => {
     
     // Log the values before updating context to verify what's being passed
     console.log("Updating context with form values:", {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      fullName: `${formData.firstName} ${formData.lastName}`,
+      applicantName: formData.applicantName,
       age: birthDate 
         ? calculateAge(birthDate)
         : 0,
@@ -32,7 +29,7 @@ export const useContextUpdater = () => {
     
     // Update client info
     setClientInfo({
-      name: formData.applicantName || `${formData.firstName} ${formData.lastName}`.trim(),
+      name: formData.applicantName,
       age: birthDate 
         ? calculateAge(birthDate)
         : 0,
