@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Wallet } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -11,6 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { usePlanningContext } from '@/context/PlanningContext';
+import { ClientInfo } from '@/services/types';
 
 // Define form schema with Zod
 const assetFormSchema = z.object({
@@ -35,15 +37,77 @@ const defaultValues: Partial<AssetFormValues> = {
   isJointlyOwned: false,
 };
 
+// Component to show client context data for debugging
+const ClientInfoDebugger: React.FC = () => {
+  const { clientInfo, state } = usePlanningContext();
+  
+  return (
+    <div className="mt-6 p-4 bg-amber-50 border border-amber-300 rounded-md">
+      <h3 className="text-lg font-medium text-amber-800 mb-2">API Context Debug Info</h3>
+      <pre className="bg-white p-2 rounded text-xs overflow-auto max-h-40">
+        {JSON.stringify({
+          clientInfo,
+          state
+        }, null, 2)}
+      </pre>
+      <div className="mt-2 text-sm text-amber-700">
+        <p><strong>Note:</strong> This diagnostic panel shows current context data that would be sent to the API. 
+        Required fields for API calls:</p>
+        <ul className="list-disc pl-5 mt-1">
+          <li>clientInfo.name: {clientInfo?.name ? '✅' : '❌'}</li>
+          <li>clientInfo.age: {clientInfo?.age ? '✅' : '❌'}</li>
+          <li>clientInfo.maritalStatus: {clientInfo?.maritalStatus ? '✅' : '❌'}</li>
+          <li>state: {state ? '✅' : '❌'}</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
 const AssetInput = () => {
   const { toast } = useToast();
+  const { clientInfo, setClientInfo, assets, setAssets } = usePlanningContext();
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetFormSchema),
     defaultValues,
   });
 
+  // Log current context on mount
+  useEffect(() => {
+    console.log("🔍 ASSETS PAGE: Current context data:", {
+      clientInfo,
+      assets
+    });
+  }, [clientInfo, assets]);
+
   function onSubmit(data: AssetFormValues) {
-    console.log("Form submitted:", data);
+    console.log("Asset form submitted:", data);
+    
+    // Update assets in context
+    setAssets(prevAssets => {
+      const updatedAssets = prevAssets || {};
+      
+      // Initialize or update the appropriate asset category
+      if (data.assetType === "bankAccount") {
+        updatedAssets.checking = updatedAssets.checking || { total: 0 };
+        updatedAssets.checking.total = (updatedAssets.checking.total || 0) + data.value;
+      } else if (data.assetType === "investment") {
+        updatedAssets.investments = updatedAssets.investments || { 
+          moneyMarket: 0, cds: 0, stocksBonds: 0, retirementAccounts: 0, total: 0 
+        };
+        updatedAssets.investments.stocksBonds = (updatedAssets.investments.stocksBonds || 0) + data.value;
+        updatedAssets.investments.total = (updatedAssets.investments.total || 0) + data.value;
+      } 
+      // Add more asset type handling as needed
+      
+      // Update summary
+      updatedAssets.summary = updatedAssets.summary || { totalAssetValue: 0 };
+      updatedAssets.summary.totalAssetValue = (updatedAssets.summary.totalAssetValue || 0) + data.value;
+      
+      console.log("Updated assets context:", updatedAssets);
+      return updatedAssets;
+    });
+
     toast({
       title: "Asset Saved",
       description: `${data.name} has been added to your assets.`,
@@ -202,6 +266,9 @@ const AssetInput = () => {
             </div>
           </form>
         </Form>
+        
+        {/* Add the debug component */}
+        <ClientInfoDebugger />
       </div>
     </div>
   );
