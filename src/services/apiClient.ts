@@ -1,8 +1,8 @@
 
 import axios from 'axios';
 
-// Get the API URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Get the API URL from environment variable or use the provided ngrok URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://3f7c-47-149-126-45.ngrok-free.app';
 
 // Create an axios instance with default config
 const apiClient = axios.create({
