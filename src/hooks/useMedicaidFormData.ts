@@ -1,21 +1,23 @@
+
 import { useState, useEffect } from "react";
 import { usePlanningContext } from "@/context/PlanningContext";
 import { toast } from "@/hooks/use-toast";
 
-// Define the form data interface to improve type safety
+// Define the form data interface to match the API expectations
 export interface MedicaidFormData {
   // Client Information
   clientDate: Date | undefined;
   homePhone: string;
   cellPhone: string;
   email: string;
-  applicantName: string;
+  firstName: string;
+  lastName: string;
   spouseName: string;
   address: string;
   city: string;
   state: string;
   zipCode: string;
-  applicantBirthDate: Date | undefined;
+  dateOfBirth: Date | undefined;
   spouseBirthDate: Date | undefined;
   applicantCitizen: boolean;
   spouseCitizen: boolean;
@@ -110,13 +112,14 @@ export const useMedicaidFormData = () => {
     homePhone: "",
     cellPhone: "",
     email: "",
-    applicantName: "",
+    firstName: "",
+    lastName: "",
     spouseName: "",
     address: "",
     city: "",
     state: "",
     zipCode: "",
-    applicantBirthDate: undefined,
+    dateOfBirth: undefined,
     spouseBirthDate: undefined,
     applicantCitizen: false,
     spouseCitizen: false,
@@ -204,14 +207,21 @@ export const useMedicaidFormData = () => {
   const [formValid, setFormValid] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof MedicaidFormData, string>>>({});
   const [showValidation, setShowValidation] = useState<boolean>(false);
+  const [hasInteracted, setHasInteracted] = useState<boolean>(false);
 
   // Sync form data with context when it changes
   useEffect(() => {
     // Make sure clientInfo is not null before accessing its properties
     if (clientInfo && clientInfo.name) {
+      // Split the name into first and last name (assuming format is "First Last")
+      const nameParts = clientInfo.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
       setFormData(prev => ({
         ...prev,
-        applicantName: clientInfo.name,
+        firstName,
+        lastName,
         maritalStatus: clientInfo.maritalStatus || ""
       }));
     }
@@ -230,14 +240,17 @@ export const useMedicaidFormData = () => {
     const errors: Partial<Record<keyof MedicaidFormData, string>> = {};
 
     // Required fields validation
-    if (!formData.applicantName.trim()) {
-      errors.applicantName = "Applicant name is required";
+    if (!formData.firstName.trim()) {
+      errors.firstName = "First name is required";
+    }
+    if (!formData.lastName.trim()) {
+      errors.lastName = "Last name is required";
     }
     if (!formData.state.trim()) {
       errors.state = "State is required";
     }
-    if (!formData.applicantBirthDate) {
-      errors.applicantBirthDate = "Applicant birth date is required";
+    if (!formData.dateOfBirth) {
+      errors.dateOfBirth = "Birth date is required";
     }
     if (!formData.maritalStatus) {
       errors.maritalStatus = "Marital status is required";
@@ -265,8 +278,8 @@ export const useMedicaidFormData = () => {
     const isValid = Object.keys(errors).length === 0;
     setFormValid(isValid);
 
-    // Only show toast notifications for errors if showValidation is true
-    if (!isValid && showValidation) {
+    // Only show toast notifications for errors if showValidation is true AND user has interacted
+    if (!isValid && showValidation && hasInteracted) {
       Object.values(errors).forEach(error => {
         toast({
           title: "Form Validation Error",
@@ -275,7 +288,7 @@ export const useMedicaidFormData = () => {
         });
       });
     }
-  }, [formData, showValidation]);
+  }, [formData, showValidation, hasInteracted]);
   
   // Handlers for form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,6 +297,8 @@ export const useMedicaidFormData = () => {
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
+    // Mark that user has interacted with the form
+    setHasInteracted(true);
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -292,6 +307,8 @@ export const useMedicaidFormData = () => {
       ...formData,
       [name]: value,
     });
+    // Mark that user has interacted with the form
+    setHasInteracted(true);
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -299,6 +316,8 @@ export const useMedicaidFormData = () => {
       ...formData,
       [name]: value,
     });
+    // Mark that user has interacted with the form
+    setHasInteracted(true);
 
     // Update context state value
     if (name === "state") {
@@ -331,9 +350,11 @@ export const useMedicaidFormData = () => {
       ...formData,
       [name]: date,
     });
+    // Mark that user has interacted with the form
+    setHasInteracted(true);
 
     // Handle age calculation if birth date changes
-    if (name === "applicantBirthDate" && date) {
+    if (name === "dateOfBirth" && date) {
       const age = calculateAge(date);
 
       setClientInfo(prevClientInfo => ({
@@ -351,6 +372,8 @@ export const useMedicaidFormData = () => {
     setFormValid,
     showValidation,
     setShowValidation,
+    hasInteracted,
+    setHasInteracted,
     handleInputChange,
     handleTextareaChange,
     handleSelectChange,

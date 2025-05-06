@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { MedicaidFormData } from "./useMedicaidFormData";
@@ -24,18 +25,20 @@ export const useMedicaidFormSubmission = () => {
   const updateContextFromFormData = (formData: MedicaidFormData, calculateAge: (birthDate: Date) => number) => {
     // Log the values before updating context to verify what's being passed
     console.log("Updating context with form values:", {
-      name: formData.applicantName,
-      age: formData.applicantBirthDate 
-        ? calculateAge(formData.applicantBirthDate)
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      fullName: `${formData.firstName} ${formData.lastName}`,
+      age: formData.dateOfBirth 
+        ? calculateAge(formData.dateOfBirth)
         : 0,
       state: formData.state
     });
     
     // Update client info
     setClientInfo({
-      name: formData.applicantName,
-      age: formData.applicantBirthDate 
-        ? calculateAge(formData.applicantBirthDate)
+      name: `${formData.firstName} ${formData.lastName}`.trim(),
+      age: formData.dateOfBirth 
+        ? calculateAge(formData.dateOfBirth)
         : 0,
       maritalStatus: formData.maritalStatus,
       healthStatus: formData.medicalStatus,
@@ -166,7 +169,7 @@ export const useMedicaidFormSubmission = () => {
     setShowValidation(true);
     
     // Validate required fields
-    if (!formData.applicantName || !formData.state || !formData.applicantBirthDate || !formData.maritalStatus) {
+    if (!formData.firstName || !formData.lastName || !formData.state || !formData.dateOfBirth || !formData.maritalStatus) {
       toast({
         title: "Missing Information",
         description: "Please fill out all required fields (name, birth date, state, and marital status).",
@@ -178,8 +181,8 @@ export const useMedicaidFormSubmission = () => {
     // Add console logs to debug form data
     console.log("Submitting form with data:", {
       clientInfo: {
-        name: formData.applicantName,
-        age: formData.applicantBirthDate ? calculateAge(formData.applicantBirthDate) : 0,
+        name: `${formData.firstName} ${formData.lastName}`,
+        age: formData.dateOfBirth ? calculateAge(formData.dateOfBirth) : 0,
         maritalStatus: formData.maritalStatus,
         state: formData.state
       },
@@ -215,11 +218,11 @@ export const useMedicaidFormSubmission = () => {
         
         // Navigate to results page
         navigate('/results');
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error during form submission:", error);
         toast({
           title: "Error",
-          description: "There was an error submitting your information. Please try again.",
+          description: error?.message || "There was an error submitting your information. Please try again.",
           variant: "destructive",
         });
       }
