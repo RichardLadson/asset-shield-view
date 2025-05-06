@@ -33,7 +33,9 @@ const MedicaidIntakeForm = () => {
     handleSelectChange,
     handleDateChange,
     calculateAge,
-    setFormData
+    setFormData,
+    showValidation,
+    setShowValidation
   } = useMedicaidFormData();
   
   const {
@@ -44,7 +46,7 @@ const MedicaidIntakeForm = () => {
   
   // Create a submission handler that passes our form data
   const onSubmit = (e: React.FormEvent) => {
-    handleSubmit(e, formData, formValid, calculateAge);
+    handleSubmit(e, formData, formValid, calculateAge, setShowValidation);
   };
 
   return (

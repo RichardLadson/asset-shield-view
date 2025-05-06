@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { MedicaidFormData } from "./useMedicaidFormData";
 import { usePlanningContext } from "@/context/PlanningContext";
+import { useNavigate } from "react-router-dom";
 
 export const useMedicaidFormSubmission = () => {
   const { 
@@ -18,6 +19,7 @@ export const useMedicaidFormSubmission = () => {
   } = usePlanningContext();
 
   const [activeSection, setActiveSection] = useState<string>("client-info");
+  const navigate = useNavigate();
 
   // Function to update context with form data
   const updateContextFromFormData = (formData: MedicaidFormData, calculateAge: (birthDate: Date) => number) => {
@@ -156,9 +158,13 @@ export const useMedicaidFormSubmission = () => {
     e: React.FormEvent,
     formData: MedicaidFormData,
     formValid: boolean,
-    calculateAge: (birthDate: Date) => number
+    calculateAge: (birthDate: Date) => number,
+    setShowValidation: (show: boolean) => void
   ) => {
     e.preventDefault();
+    
+    // Set showValidation to true to display any validation errors
+    setShowValidation(true);
     
     // Validate required fields
     if (!formData.applicantName || !formData.state || !formData.applicantBirthDate || !formData.maritalStatus) {
@@ -207,6 +213,9 @@ export const useMedicaidFormSubmission = () => {
         
         // Generate a comprehensive plan
         await generatePlan('comprehensive');
+        
+        // Navigate to results page
+        navigate('/results');
       } catch (error) {
         console.error("Error during form submission:", error);
         toast({

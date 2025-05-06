@@ -203,6 +203,7 @@ export const useMedicaidFormData = () => {
   
   const [formValid, setFormValid] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof MedicaidFormData, string>>>({});
+  const [showValidation, setShowValidation] = useState<boolean>(false);
 
   // Sync form data with context when it changes
   useEffect(() => {
@@ -264,8 +265,8 @@ export const useMedicaidFormData = () => {
     const isValid = Object.keys(errors).length === 0;
     setFormValid(isValid);
 
-    // Show toast notifications for errors
-    if (!isValid) {
+    // Only show toast notifications for errors if showValidation is true
+    if (!isValid && showValidation) {
       Object.values(errors).forEach(error => {
         toast({
           title: "Form Validation Error",
@@ -274,7 +275,7 @@ export const useMedicaidFormData = () => {
         });
       });
     }
-  }, [formData]);
+  }, [formData, showValidation]);
   
   // Handlers for form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -348,6 +349,8 @@ export const useMedicaidFormData = () => {
     formValid,
     formErrors,
     setFormValid,
+    showValidation,
+    setShowValidation,
     handleInputChange,
     handleTextareaChange,
     handleSelectChange,
