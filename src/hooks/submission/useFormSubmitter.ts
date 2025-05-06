@@ -36,27 +36,23 @@ export const useFormSubmitter = () => {
     }
     
     // Validate required fields explicitly
-    if (!formData.firstName || !formData.lastName || !formData.state || 
+    if (!formData.applicantName || !formData.state || 
         !formData.applicantBirthDate || !formData.maritalStatus) {
       console.error("Missing required fields:", {
-        firstName: !!formData.firstName,
-        lastName: !!formData.lastName,
+        applicantName: !!formData.applicantName,
         state: !!formData.state,
         birthDate: !!formData.applicantBirthDate,
         maritalStatus: !!formData.maritalStatus
       });
       toast({
         title: "Missing Information",
-        description: "Please fill out all required fields (first name, last name, birth date, state, and marital status).",
+        description: "Please fill out all required fields (name, birth date, state, and marital status).",
         variant: "destructive",
       });
       return;
     }
     
     try {
-      // Set applicantName from firstName and lastName for context consistency
-      formData.applicantName = `${formData.firstName} ${formData.lastName}`.trim();
-      
       // Ensure dateOfBirth is set from applicantBirthDate for backward compatibility
       if (formData.applicantBirthDate && !formData.dateOfBirth) {
         formData.dateOfBirth = formData.applicantBirthDate;
@@ -65,8 +61,6 @@ export const useFormSubmitter = () => {
       // Add console logs to debug form data
       console.log("Form is valid - submitting with data:", {
         clientInfo: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
           fullName: formData.applicantName,
           age: formData.applicantBirthDate ? calculateAge(formData.applicantBirthDate) : 0,
           maritalStatus: formData.maritalStatus,

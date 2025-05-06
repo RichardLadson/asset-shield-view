@@ -20,8 +20,6 @@ export const useContextUpdater = () => {
     
     // Log the values before updating context to verify what's being passed
     console.log("Updating context with form values:", {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
       fullName: formData.applicantName,
       age: birthDate 
         ? calculateAge(birthDate)

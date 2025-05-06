@@ -57,8 +57,7 @@ const MedicaidIntakeForm = () => {
       hasErrors: Object.keys(formErrors).length > 0, 
       errors: formErrors,
       requiredFields: {
-        firstName: !!formData.firstName,
-        lastName: !!formData.lastName,
+        applicantName: !!formData.applicantName,
         state: !!formData.state,
         birthDate: !!formData.applicantBirthDate,
         maritalStatus: !!formData.maritalStatus
@@ -107,11 +106,8 @@ const MedicaidIntakeForm = () => {
                 handleSelectChange={handleSelectChange}
                 setFormData={setFormData}
               />
-              {formErrors.firstName && showValidation && (
-                <p className="text-red-500 mt-1">{formErrors.firstName}</p>
-              )}
-              {formErrors.lastName && showValidation && (
-                <p className="text-red-500 mt-1">{formErrors.lastName}</p>
+              {formErrors.applicantName && showValidation && (
+                <p className="text-red-500 mt-1">{formErrors.applicantName}</p>
               )}
               {formErrors.state && showValidation && (
                 <p className="text-red-500 mt-1">{formErrors.state}</p>

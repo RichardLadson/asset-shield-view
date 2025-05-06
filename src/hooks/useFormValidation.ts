@@ -1,80 +1,60 @@
 
-import { useEffect, useState } from "react";
-import { toast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 import { MedicaidFormData } from "@/types/medicaidForm";
 
 export const useFormValidation = (
-  formData: MedicaidFormData, 
+  formData: MedicaidFormData,
   showValidation: boolean,
   hasInteracted: boolean
 ) => {
-  const [formErrors, setFormErrors] = useState<Partial<Record<keyof MedicaidFormData, string>>>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [formValid, setFormValid] = useState<boolean>(false);
 
-  // Validate form data
+  // Validate form when data or validation settings change
   useEffect(() => {
-    const errors: Partial<Record<keyof MedicaidFormData, string>> = {};
+    const errors: { [key: string]: string } = {};
 
-    // Required fields validation
-    if (!formData.firstName?.trim()) {
-      errors.firstName = "First name is required";
-    }
-    if (!formData.lastName?.trim()) {
-      errors.lastName = "Last name is required";
-    }
-    if (!formData.state?.trim()) {
-      errors.state = "State is required";
-    }
-    if (!formData.applicantBirthDate) {
-      errors.applicantBirthDate = "Birth date is required";
-    }
-    if (!formData.maritalStatus?.trim()) {
-      errors.maritalStatus = "Marital status is required";
+    // Only validate if showValidation is true or user has interacted with form
+    if (showValidation || hasInteracted) {
+      // Required fields validation
+      if (!formData.applicantName) {
+        errors.applicantName = "Applicant name is required";
+      }
+
+      if (!formData.applicantBirthDate) {
+        errors.applicantBirthDate = "Birth date is required";
+      }
+
+      if (!formData.state) {
+        errors.state = "State selection is required";
+      }
+
+      if (!formData.maritalStatus) {
+        errors.maritalStatus = "Marital status is required";
+      }
+
+      // Email validation if provided
+      if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+        errors.email = "Email address is invalid";
+      }
+
+      // Phone validation if provided
+      const phoneRegex = /^\d{10}$|^\(\d{3}\)\s*\d{3}-\d{4}$|^\d{3}-\d{3}-\d{4}$/;
+      if (formData.cellPhone && !phoneRegex.test(formData.cellPhone.replace(/\s/g, ''))) {
+        errors.cellPhone = "Cell phone number is invalid";
+      }
+      if (formData.homePhone && !phoneRegex.test(formData.homePhone.replace(/\s/g, ''))) {
+        errors.homePhone = "Home phone number is invalid";
+      }
+
+      // Zip code validation if provided
+      if (formData.zipCode && !/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
+        errors.zipCode = "Zip code is invalid";
+      }
     }
 
-    // Validate totalAssetValue
-    const assetValueStr = formData.totalAssetValue?.toString() || '';
-    const assetValue = parseFloat(assetValueStr);
-    if (assetValueStr !== '' && isNaN(assetValue)) {
-      errors.totalAssetValue = "Total asset value must be a valid number";
-    } else if (assetValue < 0) {
-      errors.totalAssetValue = "Total asset value cannot be negative";
-    }
-
-    // Validate totalMonthlyIncome
-    const monthlyIncomeStr = formData.totalMonthlyIncome?.toString() || '';
-    const monthlyIncome = parseFloat(monthlyIncomeStr);
-    if (monthlyIncomeStr !== '' && isNaN(monthlyIncome)) {
-      errors.totalMonthlyIncome = "Total monthly income must be a valid number";
-    } else if (monthlyIncome < 0) {
-      errors.totalMonthlyIncome = "Total monthly income cannot be negative";
-    }
-
-    // Update form errors state
     setFormErrors(errors);
-
-    // Log validation results for debugging
-    console.log("Form validation results:", { 
-      hasErrors: Object.keys(errors).length > 0,
-      errors,
-      showValidation,
-      hasInteracted
-    });
-
-    // Form is valid if there are no errors
-    const isValid = Object.keys(errors).length === 0;
-    setFormValid(isValid);
-
-    // Only show toast notifications for errors if showValidation is true AND user has interacted
-    if (!isValid && showValidation && hasInteracted) {
-      Object.values(errors).forEach(error => {
-        toast({
-          title: "Form Validation Error",
-          description: error,
-          variant: "destructive",
-        });
-      });
-    }
+    setFormValid(Object.keys(errors).length === 0);
   }, [formData, showValidation, hasInteracted]);
 
   return { formValid, formErrors };

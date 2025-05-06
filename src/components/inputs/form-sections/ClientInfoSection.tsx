@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format, parse, isValid } from "date-fns";
 import { CalendarIcon } from "lucide-react";
@@ -186,24 +187,13 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
           />
         </div>
 
-        {/* Names - replaced single field with separate first and last name fields */}
+        {/* Name field - restored to single field */}
         <div className="space-y-2">
-          <Label htmlFor="firstName">First Name (Applicant) *</Label>
+          <Label htmlFor="applicantName">Full Name (Applicant) *</Label>
           <Input 
-            id="firstName" 
-            name="firstName" 
-            value={formData.firstName} 
-            onChange={handleInputChange} 
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name (Applicant) *</Label>
-          <Input 
-            id="lastName" 
-            name="lastName" 
-            value={formData.lastName} 
+            id="applicantName" 
+            name="applicantName" 
+            value={formData.applicantName} 
             onChange={handleInputChange} 
             required
           />

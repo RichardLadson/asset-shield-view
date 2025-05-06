@@ -6,9 +6,7 @@ export interface MedicaidFormData {
   homePhone: string;
   cellPhone: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  applicantName: string;
+  applicantName: string; // Single name field instead of separate first/last name
   spouseName: string;
   address: string;
   city: string;
