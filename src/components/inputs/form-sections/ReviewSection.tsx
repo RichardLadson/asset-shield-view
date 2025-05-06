@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent } from "../../ui/card";
 import { Separator } from "../../ui/separator";
@@ -60,8 +59,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ formData }) => {
         {/* Client Information */}
         <div className="mb-8">
           <SectionHeader title="Client Information" />
-          <InfoItem label="First Name" value={formData.firstName} />
-          <InfoItem label="Last Name" value={formData.lastName} />
+          <InfoItem label="Full Name" value={formData.applicantName} />
           <InfoItem label="Spouse Name" value={formData.spouseName} />
           <InfoItem label="Birth Date" value={formatDate(formData.applicantBirthDate)} />
           <InfoItem label="Spouse Birth Date" value={formatDate(formData.spouseBirthDate)} />

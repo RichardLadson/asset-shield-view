@@ -12,9 +12,13 @@ export const eligibilityApi = {
     state: string;
   }): Promise<ApiResponse<any>> => {
     try {
+      // Log the payload being sent to API for debugging
+      console.log("Sending eligibility assessment data to API:", data);
+      
       const response = await apiClient.post('/api/eligibility/assess', data);
       return response.data;
     } catch (error) {
+      console.error("Error in eligibility assessment API call:", error);
       if (axios.isAxiosError(error) && error.response) {
         return error.response.data as ApiResponse<any>;
       }
