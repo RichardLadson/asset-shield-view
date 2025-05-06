@@ -186,13 +186,24 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
           />
         </div>
 
-        {/* Names */}
+        {/* Names - replaced single field with separate first and last name fields */}
         <div className="space-y-2">
-          <Label htmlFor="applicantName">Full Name (Applicant) *</Label>
+          <Label htmlFor="firstName">First Name (Applicant) *</Label>
           <Input 
-            id="applicantName" 
-            name="applicantName" 
-            value={formData.applicantName} 
+            id="firstName" 
+            name="firstName" 
+            value={formData.firstName} 
+            onChange={handleInputChange} 
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Last Name (Applicant) *</Label>
+          <Input 
+            id="lastName" 
+            name="lastName" 
+            value={formData.lastName} 
             onChange={handleInputChange} 
             required
           />

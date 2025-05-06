@@ -29,14 +29,14 @@ export const getInitialFormData = () => {
     email: "",
     firstName: "",
     lastName: "",
-    applicantName: "", // Added missing required property
+    applicantName: "", // Calculated from firstName + lastName on submit
     spouseName: "",
     address: "",
     city: "",
     state: "",
     zipCode: "",
     dateOfBirth: undefined,
-    applicantBirthDate: undefined, // Added missing required property
+    applicantBirthDate: undefined,
     spouseBirthDate: undefined,
     applicantCitizen: false,
     spouseCitizen: false,
