@@ -6,8 +6,8 @@ import planningApi from './planningApi';
 import reportApi from './reportApi';
 
 // Export all types from types.ts
-export * from './types';
-export { ApiResponse };
+export type * from './types';
+export type { ApiResponse };
 
 // Export all API services
 export const api = {
