@@ -1,18 +1,15 @@
 
 import axios from 'axios';
 import apiClient, { ApiResponse } from './apiClient';
-import { Assets, Income } from './types';
+import { Assets, Income, ClientInfo } from './types';
 
 // Eligibility API endpoints
 export const eligibilityApi = {
   assessEligibility: async (data: {
+    clientInfo: ClientInfo;
     assets: Assets;
     income: Income;
-    maritalStatus: string;
     state: string;
-    age: number;
-    healthStatus?: string;
-    isCrisis?: boolean;
   }): Promise<ApiResponse<any>> => {
     try {
       const response = await apiClient.post('/api/eligibility/assess', data);

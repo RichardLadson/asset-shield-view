@@ -35,15 +35,20 @@ export const usePlanningActions = (
 
     setLoading(true);
     try {
+      // Restructured payload to match backend expectations
       const payload = {
+        clientInfo: {
+          name: clientInfo.name,
+          age: Number(clientInfo.age),
+          maritalStatus: clientInfo.maritalStatus,
+          healthStatus: clientInfo.healthStatus || undefined,
+          isCrisis: clientInfo.isCrisis || false,
+        },
+        state: clientInfo.state || state,
         assets: assets,
         income: income,
-        maritalStatus: clientInfo.maritalStatus,
-        state: clientInfo.state || state,
-        age: clientInfo.age,
-        healthStatus: clientInfo.healthStatus || undefined,
-        isCrisis: clientInfo.isCrisis || false,
       };
+      
       console.log("Sending eligibility assessment payload:", payload);
 
       const response = await api.eligibility.assessEligibility(payload);
@@ -90,25 +95,27 @@ export const usePlanningActions = (
 
     setLoading(true);
     try {
-      console.log("Sending planning request with data:", {
-        clientInfo,
-        assets,
-        income,
-        expenses,
-        medicalInfo,
-        livingInfo,
-        state: clientInfo.state || state
-      });
-      
-      const response = await api.planning.comprehensivePlanning({
-        clientInfo: clientInfo,
+      // Restructured payload to match backend expectations
+      const payload = {
+        clientInfo: {
+          name: clientInfo.name,
+          age: Number(clientInfo.age),
+          maritalStatus: clientInfo.maritalStatus,
+          healthStatus: clientInfo.healthStatus || undefined,
+          isCrisis: clientInfo.isCrisis || false,
+          state: clientInfo.state || state,
+        },
         assets: assets,
         income: income,
         expenses: expenses || undefined,
         medicalInfo: medicalInfo || undefined,
         livingInfo: livingInfo || undefined,
         state: clientInfo.state || state,
-      });
+      };
+      
+      console.log("Sending planning request with data:", payload);
+      
+      const response = await api.planning.comprehensivePlanning(payload);
       
       console.log("Received planning response:", response);
       

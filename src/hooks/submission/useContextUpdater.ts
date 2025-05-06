@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { MedicaidFormData } from "@/types/medicaidForm";
 import { usePlanningContext } from "@/context/PlanningContext";
@@ -27,7 +28,7 @@ export const useContextUpdater = () => {
       state: formData.state
     });
     
-    // Update client info
+    // Update client info with properly structured data
     setClientInfo({
       name: formData.applicantName,
       age: birthDate 
@@ -37,7 +38,9 @@ export const useContextUpdater = () => {
       healthStatus: formData.medicalStatus,
       email: formData.email,
       phone: formData.cellPhone || formData.homePhone,
-      state: formData.state
+      state: formData.state,
+      // Add additional properties that might be expected by the API
+      isCrisis: formData.medicalStatus === 'critical' || false
     });
 
     // Update assets
