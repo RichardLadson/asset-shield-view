@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { 
   Accordion, 
   AccordionContent, 
@@ -30,6 +30,7 @@ const MedicaidIntakeForm = () => {
   const {
     formData,
     formValid,
+    formErrors,
     handleInputChange,
     handleTextareaChange,
     handleSelectChange,
@@ -37,7 +38,9 @@ const MedicaidIntakeForm = () => {
     calculateAge,
     setFormData,
     showValidation,
-    setShowValidation
+    setShowValidation,
+    hasInteracted,
+    setHasInteracted
   } = useMedicaidFormData();
   
   const {
@@ -47,9 +50,26 @@ const MedicaidIntakeForm = () => {
     updateContextFromFormData
   } = useMedicaidFormSubmission();
   
+  // Log form validation state on load and when it changes
+  useEffect(() => {
+    console.log("Form state:", { 
+      formValid, 
+      hasErrors: Object.keys(formErrors).length > 0, 
+      errors: formErrors,
+      requiredFields: {
+        firstName: !!formData.firstName,
+        lastName: !!formData.lastName,
+        state: !!formData.state,
+        birthDate: !!formData.applicantBirthDate,
+        maritalStatus: !!formData.maritalStatus
+      }
+    });
+  }, [formValid, formErrors, formData]);
+  
   // Create a submission handler that passes our form data
   const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    console.log("Form submission triggered");
+    setHasInteracted(true);
     
     // Use the handleSubmit function from useMedicaidFormSubmission
     handleSubmit(
@@ -87,6 +107,21 @@ const MedicaidIntakeForm = () => {
                 handleSelectChange={handleSelectChange}
                 setFormData={setFormData}
               />
+              {formErrors.firstName && showValidation && (
+                <p className="text-red-500 mt-1">{formErrors.firstName}</p>
+              )}
+              {formErrors.lastName && showValidation && (
+                <p className="text-red-500 mt-1">{formErrors.lastName}</p>
+              )}
+              {formErrors.state && showValidation && (
+                <p className="text-red-500 mt-1">{formErrors.state}</p>
+              )}
+              {formErrors.applicantBirthDate && showValidation && (
+                <p className="text-red-500 mt-1">{formErrors.applicantBirthDate}</p>
+              )}
+              {formErrors.maritalStatus && showValidation && (
+                <p className="text-red-500 mt-1">{formErrors.maritalStatus}</p>
+              )}
             </AccordionContent>
           </AccordionItem>
 
@@ -171,6 +206,19 @@ const MedicaidIntakeForm = () => {
             <AccordionContent className="p-4">
               <div className="space-y-6">
                 <ReviewSection formData={formData} />
+                
+                {!formValid && showValidation && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-md mb-4">
+                    <h3 className="text-red-700 font-medium mb-2">Please correct the following errors:</h3>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {Object.entries(formErrors).map(([field, error]) => (
+                        <li key={field} className="text-red-600">
+                          {error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 
                 <div className="border-t pt-4 flex justify-end">
                   <Button 

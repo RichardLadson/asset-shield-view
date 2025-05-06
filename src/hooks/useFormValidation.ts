@@ -50,7 +50,16 @@ export const useFormValidation = (
       errors.totalMonthlyIncome = "Total monthly income cannot be negative";
     }
 
+    // Update form errors state
     setFormErrors(errors);
+
+    // Log validation results for debugging
+    console.log("Form validation results:", { 
+      hasErrors: Object.keys(errors).length > 0,
+      errors,
+      showValidation,
+      hasInteracted
+    });
 
     // Form is valid if there are no errors
     const isValid = Object.keys(errors).length === 0;

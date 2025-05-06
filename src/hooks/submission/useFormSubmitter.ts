@@ -22,17 +22,29 @@ export const useFormSubmitter = () => {
     // Set showValidation to true to display any validation errors
     setShowValidation(true);
     
-    // Ensure dateOfBirth is set from applicantBirthDate for backward compatibility
-    if (formData.applicantBirthDate && !formData.dateOfBirth) {
-      formData.dateOfBirth = formData.applicantBirthDate;
+    console.log("Form submission initiated - checking validity:", { formValid });
+    
+    // Check if form is valid before proceeding
+    if (!formValid) {
+      console.error("Form validation failed - stopping submission");
+      toast({
+        title: "Form Validation Error",
+        description: "Please fill out all required fields correctly before submitting.",
+        variant: "destructive",
+      });
+      return;
     }
     
-    // Set applicantName from firstName and lastName for backward compatibility
-    formData.applicantName = `${formData.firstName} ${formData.lastName}`.trim();
-    
-    // Validate required fields
+    // Validate required fields explicitly
     if (!formData.firstName || !formData.lastName || !formData.state || 
         !formData.applicantBirthDate || !formData.maritalStatus) {
+      console.error("Missing required fields:", {
+        firstName: !!formData.firstName,
+        lastName: !!formData.lastName,
+        state: !!formData.state,
+        birthDate: !!formData.applicantBirthDate,
+        maritalStatus: !!formData.maritalStatus
+      });
       toast({
         title: "Missing Information",
         description: "Please fill out all required fields (first name, last name, birth date, state, and marital status).",
@@ -41,62 +53,69 @@ export const useFormSubmitter = () => {
       return;
     }
     
-    // Add console logs to debug form data
-    console.log("Submitting form with data:", {
-      clientInfo: {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        fullName: formData.applicantName,
-        age: formData.applicantBirthDate ? calculateAge(formData.applicantBirthDate) : 0,
-        maritalStatus: formData.maritalStatus,
-        state: formData.state
-      },
-      totalAssets: formData.totalAssetValue,
-      totalIncome: formData.totalMonthlyIncome
-    });
-    
-    // Update context with form data
-    updateContextFromFormData(formData, calculateAge);
-    
-    // Wait for state updates to propagate before proceeding
-    setTimeout(async () => {
-      // Log what was sent to context
-      console.log("Updated context data after timeout:", {
-        clientInfo: "currentClientInfo",
-        assets: "currentAssets",
-        income: "currentIncome",
-        state: formData.state
+    try {
+      // Set applicantName from firstName and lastName for context consistency
+      formData.applicantName = `${formData.firstName} ${formData.lastName}`.trim();
+      
+      // Ensure dateOfBirth is set from applicantBirthDate for backward compatibility
+      if (formData.applicantBirthDate && !formData.dateOfBirth) {
+        formData.dateOfBirth = formData.applicantBirthDate;
+      }
+      
+      // Add console logs to debug form data
+      console.log("Form is valid - submitting with data:", {
+        clientInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          fullName: formData.applicantName,
+          age: formData.applicantBirthDate ? calculateAge(formData.applicantBirthDate) : 0,
+          maritalStatus: formData.maritalStatus,
+          state: formData.state
+        },
+        totalAssets: formData.totalAssetValue,
+        totalIncome: formData.totalMonthlyIncome
       });
       
-      // Show toast notification
+      // Update context with form data
+      console.log("Updating context with form data...");
+      updateContextFromFormData(formData, calculateAge);
+      
+      // Show toast notification for successful form submission
       toast({
         title: "Form Submitted",
-        description: "Your Medicaid Planning information has been saved successfully.",
+        description: "Processing your Medicaid Planning information...",
       });
       
-      try {
-        console.log("Starting eligibility assessment...");
-        // Generate an eligibility assessment
-        const eligibilityResponse = await assessEligibility();
-        console.log("Eligibility assessment completed:", eligibilityResponse);
-        
-        console.log("Starting plan generation...");
-        // Generate a comprehensive plan
-        const planResponse = await generatePlan('comprehensive');
-        console.log("Plan generation completed:", planResponse);
-        
-        // Navigate to results page
-        console.log("Navigating to results page...");
-        navigate('/results');
-      } catch (error: any) {
-        console.error("Error during form submission:", error);
-        toast({
-          title: "Error",
-          description: error?.message || "There was an error submitting your information. Please try again.",
-          variant: "destructive",
-        });
+      console.log("Starting eligibility assessment...");
+      // Generate an eligibility assessment
+      const eligibilityResponse = await assessEligibility();
+      console.log("Eligibility assessment result:", eligibilityResponse);
+      
+      if (!eligibilityResponse) {
+        throw new Error("Eligibility assessment failed. Please try again.");
       }
-    }, 100);
+      
+      console.log("Starting plan generation...");
+      // Generate a comprehensive plan
+      const planResponse = await generatePlan('comprehensive');
+      console.log("Plan generation result:", planResponse);
+      
+      if (!planResponse) {
+        throw new Error("Plan generation failed. Please try again.");
+      }
+      
+      // Navigation should only happen if we have successful responses
+      console.log("Successfully generated plan and eligibility. Navigating to results page...");
+      navigate('/results');
+      
+    } catch (error: any) {
+      console.error("Error during form submission:", error);
+      toast({
+        title: "Submission Error",
+        description: error?.message || "There was an error submitting your information. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return { handleSubmit };
