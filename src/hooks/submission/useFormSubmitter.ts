@@ -58,11 +58,14 @@ export const useFormSubmitter = () => {
         formData.dateOfBirth = formData.applicantBirthDate;
       }
       
+      // Calculate the age from birth date and log it for debugging
+      const applicantAge = formData.applicantBirthDate ? calculateAge(formData.applicantBirthDate) : 0;
+      
       // Add console logs to debug form data
       console.log("Form is valid - submitting with data:", {
         clientInfo: {
-          fullName: formData.applicantName,
-          age: formData.applicantBirthDate ? calculateAge(formData.applicantBirthDate) : 0,
+          name: formData.applicantName,
+          age: applicantAge,
           maritalStatus: formData.maritalStatus,
           state: formData.state
         },

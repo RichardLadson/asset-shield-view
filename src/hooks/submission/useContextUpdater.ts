@@ -19,23 +19,23 @@ export const useContextUpdater = () => {
     // Ensure we're using the correct birth date field
     const birthDate = formData.applicantBirthDate || formData.dateOfBirth;
     
+    // Calculate age as a number
+    const age = birthDate ? calculateAge(birthDate) : 0;
+    
     // Log the values before updating context to verify what's being passed
     console.log("Updating context with form values:", {
       fullName: formData.applicantName,
-      age: birthDate 
-        ? calculateAge(birthDate)
-        : 0,
-      state: formData.state
+      age: age,
+      state: formData.state,
+      maritalStatus: formData.maritalStatus
     });
     
     // Update client info with properly structured data
     setClientInfo({
       name: formData.applicantName,
-      age: birthDate 
-        ? calculateAge(birthDate)
-        : 0,
+      age: age, // Make sure age is a number
       maritalStatus: formData.maritalStatus,
-      healthStatus: formData.medicalStatus,
+      healthStatus: formData.medicalStatus || "stable",
       email: formData.email,
       phone: formData.cellPhone || formData.homePhone,
       state: formData.state,
@@ -43,7 +43,7 @@ export const useContextUpdater = () => {
       isCrisis: formData.medicalStatus === 'critical' || false
     });
 
-    // Update assets
+    // Update assets with a structure matching the API expectations
     setAssets({
       checking: {
         total: parseFloat(formData.totalChecking) || 0
@@ -55,7 +55,8 @@ export const useContextUpdater = () => {
         moneyMarket: parseFloat(formData.moneyMarket) || 0,
         cds: parseFloat(formData.cds) || 0,
         stocksBonds: parseFloat(formData.stocksBonds) || 0,
-        retirementAccounts: parseFloat(formData.retirementAccounts) || 0
+        retirementAccounts: parseFloat(formData.retirementAccounts) || 0,
+        total: parseFloat(formData.totalInvestmentAssets) || 0
       },
       lifeInsurance: {
         faceValue: parseFloat(formData.lifeInsuranceFaceValue) || 0,
@@ -65,7 +66,19 @@ export const useContextUpdater = () => {
         homeValue: parseFloat(formData.homeValue) || 0,
         mortgageValue: parseFloat(formData.outstandingMortgage) || 0,
         otherRealEstate: parseFloat(formData.otherRealEstate) || 0,
-        intentToReturnHome: formData.intentToReturnHome
+        intentToReturnHome: formData.intentToReturnHome,
+        primaryResidence: {
+          value: parseFloat(formData.homeValue) || 0,
+          exempt: true
+        },
+        otherProperties: parseFloat(formData.otherRealEstate) || 0
+      },
+      vehicles: {
+        primaryVehicle: {
+          value: parseFloat(formData.vehicleValue) || 0,
+          exempt: true
+        },
+        additionalVehicles: 0
       },
       exempt: {
         householdProperty: parseFloat(formData.householdProperty) || 0,
@@ -73,12 +86,14 @@ export const useContextUpdater = () => {
         burialPlots: formData.burialPlots,
         otherAssets: parseFloat(formData.otherAssets) || 0
       },
+      personalProperty: parseFloat(formData.householdProperty) || 0,
+      other: parseFloat(formData.otherAssets) || 0,
       summary: {
         totalAssetValue: parseFloat(formData.totalAssetValue) || 0
       }
     });
 
-    // Update income
+    // Update income with a structure matching the API expectations
     setIncome({
       socialSecurity: {
         applicant: parseFloat(formData.applicantSocialSecurity) || 0,
@@ -88,12 +103,18 @@ export const useContextUpdater = () => {
         applicant: parseFloat(formData.applicantPension) || 0,
         spouse: parseFloat(formData.spousePension) || 0
       },
+      employment: {
+        applicant: 0,
+        spouse: 0
+      },
       other: {
         annuity: parseFloat(formData.annuityIncome) || 0,
         rental: parseFloat(formData.rentalIncome) || 0,
         investment: parseFloat(formData.investmentIncome) || 0,
         other: formData.otherIncomeSources
       },
+      rentalIncome: parseFloat(formData.rentalIncome) || 0,
+      investmentIncome: parseFloat(formData.investmentIncome) || 0,
       summary: {
         totalMonthlyIncome: parseFloat(formData.totalMonthlyIncome) || 0
       }

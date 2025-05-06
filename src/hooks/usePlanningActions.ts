@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/types";
 import api from "@/services/api";
@@ -35,13 +36,16 @@ export const usePlanningActions = (
 
     setLoading(true);
     try {
+      // Ensure age is a number, not a string
+      const clientAge = typeof clientInfo.age === 'string' ? parseInt(clientInfo.age, 10) : clientInfo.age;
+      
       // Restructured payload to match backend expectations
       const payload = {
         clientInfo: {
           name: clientInfo.name,
-          age: Number(clientInfo.age),
+          age: clientAge, // Ensure age is a number
           maritalStatus: clientInfo.maritalStatus,
-          healthStatus: clientInfo.healthStatus || undefined,
+          healthStatus: clientInfo.healthStatus || "stable",
           isCrisis: clientInfo.isCrisis || false,
         },
         state: clientInfo.state || state,
@@ -49,7 +53,7 @@ export const usePlanningActions = (
         income: income,
       };
       
-      console.log("Sending eligibility assessment payload:", payload);
+      console.log("Sending eligibility assessment payload:", JSON.stringify(payload, null, 2));
 
       const response = await api.eligibility.assessEligibility(payload);
       console.log("Received eligibility response:", response);
