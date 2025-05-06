@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { MedicaidFormData } from "./useMedicaidFormData";
+import { MedicaidFormData } from "@/types/medicaidForm";
 import { usePlanningContext } from "@/context/PlanningContext";
 import { useNavigate } from "react-router-dom";
 
