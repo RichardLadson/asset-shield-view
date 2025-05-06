@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/types";
 import api from "@/services/api";
@@ -31,7 +30,7 @@ export const usePlanningActions = (
         title: "Missing Information",
         description: "Please complete all required fields before assessing eligibility.",
       });
-      return;
+      return null;
     }
 
     setLoading(true);
@@ -48,6 +47,7 @@ export const usePlanningActions = (
       console.log("Sending eligibility assessment payload:", payload);
 
       const response = await api.eligibility.assessEligibility(payload);
+      console.log("Received eligibility response:", response);
 
       if (response.status === 'error') {
         throw new Error(response.message || "Failed to assess eligibility");
@@ -59,6 +59,8 @@ export const usePlanningActions = (
         description: "Your eligibility has been successfully assessed.",
       });
       
+      return response.data;
+      
     } catch (error: any) {
       console.error("Eligibility Assessment Error:", error);
       setEligibilityResults(null);
@@ -67,6 +69,7 @@ export const usePlanningActions = (
         title: "Assessment Error",
         description: error?.message || "Unable to assess eligibility. Please try again later or check your network connection.",
       });
+      return null;
     } finally {
       setLoading(false);
     }
@@ -82,7 +85,7 @@ export const usePlanningActions = (
         title: "Missing Information",
         description: "Please complete all required fields before generating a plan.",
       });
-      return;
+      return null;
     }
 
     setLoading(true);
@@ -107,6 +110,8 @@ export const usePlanningActions = (
         state: clientInfo.state || state,
       });
       
+      console.log("Received planning response:", response);
+      
       if (response.status === 'error') {
         throw new Error(response.message || `Failed to generate ${planType} plan`);
       }
@@ -117,8 +122,7 @@ export const usePlanningActions = (
         description: `Your ${planType} plan has been successfully generated.`,
       });
       
-      // Navigate to results page after successful plan generation
-      navigate('/results');
+      return response.data;
       
     } catch (error: any) {
       console.error(`${planType} Planning Error:`, error);
@@ -128,13 +132,19 @@ export const usePlanningActions = (
         title: "Planning Error",
         description: error?.message || `Unable to generate ${planType} plan. Please check your network connection or try again later.`,
       });
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
   const runComprehensivePlanning = async () => {
-    await generatePlan('comprehensive');
+    const result = await generatePlan('comprehensive');
+    if (result) {
+      // Navigate to results only if we have data
+      navigate('/results');
+    }
+    return result;
   };
 
   const generateReport = async (reportType: string = 'detailed', format: string = 'pdf'): Promise<void> => {

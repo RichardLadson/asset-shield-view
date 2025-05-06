@@ -75,13 +75,18 @@ export const useFormSubmitter = () => {
       });
       
       try {
+        console.log("Starting eligibility assessment...");
         // Generate an eligibility assessment
-        await assessEligibility();
+        const eligibilityResponse = await assessEligibility();
+        console.log("Eligibility assessment completed:", eligibilityResponse);
         
+        console.log("Starting plan generation...");
         // Generate a comprehensive plan
-        await generatePlan('comprehensive');
+        const planResponse = await generatePlan('comprehensive');
+        console.log("Plan generation completed:", planResponse);
         
         // Navigate to results page
+        console.log("Navigating to results page...");
         navigate('/results');
       } catch (error: any) {
         console.error("Error during form submission:", error);
