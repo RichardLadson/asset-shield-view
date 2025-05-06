@@ -16,22 +16,25 @@ export const useContextUpdater = () => {
 
   // Function to update context with form data
   const updateContextFromFormData = (formData: MedicaidFormData, calculateAge: (birthDate: Date) => number) => {
+    // Ensure we're using the correct birth date field
+    const birthDate = formData.applicantBirthDate || formData.dateOfBirth;
+    
     // Log the values before updating context to verify what's being passed
     console.log("Updating context with form values:", {
       firstName: formData.firstName,
       lastName: formData.lastName,
       fullName: `${formData.firstName} ${formData.lastName}`,
-      age: formData.dateOfBirth 
-        ? calculateAge(formData.dateOfBirth)
+      age: birthDate 
+        ? calculateAge(birthDate)
         : 0,
       state: formData.state
     });
     
     // Update client info
     setClientInfo({
-      name: `${formData.firstName} ${formData.lastName}`.trim(),
-      age: formData.dateOfBirth 
-        ? calculateAge(formData.dateOfBirth)
+      name: formData.applicantName || `${formData.firstName} ${formData.lastName}`.trim(),
+      age: birthDate 
+        ? calculateAge(birthDate)
         : 0,
       maritalStatus: formData.maritalStatus,
       healthStatus: formData.medicalStatus,

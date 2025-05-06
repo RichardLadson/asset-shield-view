@@ -56,12 +56,14 @@ export const useFormHandlers = (
     setFormData({
       ...formData,
       [name]: date,
+      // If applicantBirthDate is changing, also update dateOfBirth for compatibility
+      ...(name === "applicantBirthDate" ? { dateOfBirth: date } : {}),
     });
     // Mark that user has interacted with the form
     setHasInteracted(true);
 
     // Handle age calculation if birth date changes
-    if (name === "dateOfBirth" && date) {
+    if ((name === "dateOfBirth" || name === "applicantBirthDate") && date) {
       updateContextAge(date);
     }
   };

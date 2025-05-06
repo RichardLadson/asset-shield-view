@@ -8,13 +8,15 @@ export interface MedicaidFormData {
   email: string;
   firstName: string;
   lastName: string;
+  applicantName: string;
   spouseName: string;
   address: string;
   city: string;
   state: string;
   zipCode: string;
-  dateOfBirth: Date | undefined;
+  applicantBirthDate: Date | undefined;
   spouseBirthDate: Date | undefined;
+  dateOfBirth: Date | undefined; // Keep for backward compatibility
   applicantCitizen: boolean;
   spouseCitizen: boolean;
   veteranStatus: string;

@@ -25,8 +25,8 @@ export const useFormValidation = (
     if (!formData.state.trim()) {
       errors.state = "State is required";
     }
-    if (!formData.dateOfBirth) {
-      errors.dateOfBirth = "Birth date is required";
+    if (!formData.applicantBirthDate) {
+      errors.applicantBirthDate = "Birth date is required";
     }
     if (!formData.maritalStatus) {
       errors.maritalStatus = "Marital status is required";

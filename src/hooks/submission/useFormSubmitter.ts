@@ -22,8 +22,14 @@ export const useFormSubmitter = () => {
     // Set showValidation to true to display any validation errors
     setShowValidation(true);
     
+    // Ensure dateOfBirth is set from applicantBirthDate for backward compatibility
+    if (formData.applicantBirthDate && !formData.dateOfBirth) {
+      formData.dateOfBirth = formData.applicantBirthDate;
+    }
+    
     // Validate required fields
-    if (!formData.firstName || !formData.lastName || !formData.state || !formData.dateOfBirth || !formData.maritalStatus) {
+    if (!formData.firstName || !formData.lastName || !formData.state || 
+        !formData.applicantBirthDate || !formData.maritalStatus) {
       toast({
         title: "Missing Information",
         description: "Please fill out all required fields (name, birth date, state, and marital status).",
@@ -36,7 +42,7 @@ export const useFormSubmitter = () => {
     console.log("Submitting form with data:", {
       clientInfo: {
         name: `${formData.firstName} ${formData.lastName}`,
-        age: formData.dateOfBirth ? calculateAge(formData.dateOfBirth) : 0,
+        age: formData.applicantBirthDate ? calculateAge(formData.applicantBirthDate) : 0,
         maritalStatus: formData.maritalStatus,
         state: formData.state
       },
