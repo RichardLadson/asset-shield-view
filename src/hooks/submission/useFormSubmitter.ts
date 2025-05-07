@@ -84,7 +84,7 @@ export const useFormSubmitter = () => {
       });
       
       // Wait a short time to ensure context is updated before proceeding
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       console.log("Starting eligibility assessment...");
       // Generate an eligibility assessment
@@ -100,9 +100,9 @@ export const useFormSubmitter = () => {
           name: formData.applicantName,
           age: applicantAge,
           maritalStatus: formData.maritalStatus,
-          healthStatus: formData.healthStatus || "",
+          healthStatus: formData.medicalStatus || "", // Fixed: medicalStatus instead of healthStatus
           email: formData.email || "",
-          phone: formData.phone || "",
+          phone: formData.cellPhone || formData.homePhone || "", // Fixed: using cellPhone/homePhone instead of phone
           state: formData.state
         });
         
@@ -134,11 +134,11 @@ export const useFormSubmitter = () => {
         // Create income object from form data
         setIncome({
           socialSecurity: {
-            applicant: parseFloat(formData.socialSecurityIncome || '0'),
+            applicant: parseFloat(formData.applicantSocialSecurity || '0'), // Fixed: using applicantSocialSecurity instead of socialSecurityIncome
             spouse: 0
           },
           pension: {
-            applicant: parseFloat(formData.pensionIncome || '0'),
+            applicant: parseFloat(formData.applicantPension || '0'), // Fixed: using applicantPension instead of pensionIncome
             spouse: 0
           },
           other: {
@@ -153,6 +153,9 @@ export const useFormSubmitter = () => {
       // Generate a comprehensive plan
       await generatePlan('comprehensive');
       console.log("Plan generation completed");
+      
+      // Add additional delay to ensure results are populated
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Navigate to results page
       console.log("Navigating to results page...");

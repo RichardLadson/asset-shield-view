@@ -8,7 +8,7 @@ import { usePlanningContext } from "@/context/PlanningContext";
 import { toast } from "@/hooks/use-toast";
 
 const ResultsPage = () => {
-  const { eligibilityResults, planningResults } = usePlanningContext();
+  const { eligibilityResults, planningResults, clientInfo } = usePlanningContext();
   const navigate = useNavigate();
 
   // Check if we have results, if not redirect to form
@@ -21,8 +21,16 @@ const ResultsPage = () => {
         variant: "destructive",
       });
       navigate("/asset-input");
+    } else if (!clientInfo?.name) {
+      console.log("Missing client info, redirecting to intake form");
+      toast({
+        title: "Missing Client Information",
+        description: "Please complete the client information section before viewing results.",
+        variant: "destructive",
+      });
+      navigate("/asset-input");
     }
-  }, [eligibilityResults, planningResults, navigate]);
+  }, [eligibilityResults, planningResults, clientInfo, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col">
