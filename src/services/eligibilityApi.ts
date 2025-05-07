@@ -26,6 +26,31 @@ const log = (message: string, data?: any) => {
   }
 };
 
+// Normalize API response to ensure consistent format
+const normalizeResponse = (responseData: any): any => {
+  // If the data contains string representations of objects, try to parse them
+  if (responseData && typeof responseData === 'object') {
+    const normalized = { ...responseData };
+    
+    // Check for common fields that might need parsing
+    ['countableAssets', 'nonCountableAssets', 'totalIncome'].forEach(field => {
+      if (typeof normalized[field] === 'string' && normalized[field].startsWith('[object Object]')) {
+        log(`Converting string representation to object for ${field}`);
+        try {
+          // For these fields, we'll create an object representation instead
+          normalized[field] = { value: normalized[field] };
+        } catch (e) {
+          log(`Error normalizing ${field}`, e);
+        }
+      }
+    });
+    
+    return normalized;
+  }
+  
+  return responseData;
+};
+
 // Eligibility API endpoints
 export const eligibilityApi = {
   assessEligibility: async (data: {
@@ -103,7 +128,15 @@ export const eligibilityApi = {
       log("Sending API request to: /api/eligibility/assess");
       const response = await apiClient.post('/api/eligibility/assess', data);
       log("✅ API Response received:", response.data);
-      return response.data;
+      
+      // Normalize the response to ensure consistent format
+      const normalizedResponse = {
+        ...response,
+        data: normalizeResponse(response.data)
+      };
+      
+      log("Normalized response:", normalizedResponse.data);
+      return normalizedResponse.data;
     } catch (error) {
       log("❌ Error in eligibility assessment API call:", error);
       if (axios.isAxiosError(error)) {

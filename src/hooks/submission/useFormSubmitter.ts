@@ -88,23 +88,22 @@ export const useFormSubmitter = () => {
       const eligibilityResponse = await assessEligibility();
       console.log("Eligibility assessment result:", eligibilityResponse);
       
-      // Check if eligibility assessment was successful
-      if (eligibilityResponse === null || eligibilityResponse === undefined) {
-        throw new Error("Eligibility assessment failed. Please try again.");
+      // Check if eligibility assessment was successful - even if not null/undefined but an actual error or empty object
+      if (!eligibilityResponse || 
+          typeof eligibilityResponse !== 'object' || 
+          Object.keys(eligibilityResponse).length === 0) {
+        console.error("Invalid eligibility response:", eligibilityResponse);
+        throw new Error("Eligibility assessment returned an invalid response. Please try again.");
       }
       
       console.log("Starting plan generation...");
-      // Generate a comprehensive plan
+      // Generate a comprehensive plan - the response can be any object with data, even if it's not complete
       const planResponse = await generatePlan('comprehensive');
       console.log("Plan generation result:", planResponse);
       
-      // Check if plan generation was successful
-      if (planResponse === null || planResponse === undefined) {
-        throw new Error("Plan generation failed. Please try again.");
-      }
-      
-      // Navigation should only happen if we have successful responses
-      console.log("Successfully generated plan and eligibility. Navigating to results page...");
+      // Navigate to results even if plan generation has issues
+      // This ensures users can at least see their eligibility results
+      console.log("Navigating to results page with available data...");
       navigate('/results');
       
     } catch (error: any) {

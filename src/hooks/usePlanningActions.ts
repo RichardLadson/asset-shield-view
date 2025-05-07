@@ -62,13 +62,19 @@ export const usePlanningActions = (
         throw new Error(response.message || "Failed to assess eligibility");
       }
 
-      setEligibilityResults(response.data);
+      // Check if response.data exists, otherwise use the response itself
+      // This ensures compatibility with different API response formats
+      const eligibilityData = response.data || response;
+      
+      // Store the eligibility results
+      setEligibilityResults(eligibilityData);
+      
       toast({
         title: "Eligibility Assessed",
         description: "Your eligibility has been successfully assessed.",
       });
       
-      return response.data;
+      return eligibilityData;
       
     } catch (error: any) {
       console.error("Eligibility Assessment Error:", error);
