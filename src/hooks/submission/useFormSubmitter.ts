@@ -88,7 +88,8 @@ export const useFormSubmitter = () => {
       const eligibilityResponse = await assessEligibility();
       console.log("Eligibility assessment result:", eligibilityResponse);
       
-      // Check if eligibility assessment was successful - even if not null/undefined but an actual error or empty object
+      // Check if eligibility assessment was successful
+      // Make sure we're checking a value that can be tested for truthiness
       if (!eligibilityResponse || 
           typeof eligibilityResponse !== 'object' || 
           Object.keys(eligibilityResponse).length === 0) {
@@ -97,7 +98,7 @@ export const useFormSubmitter = () => {
       }
       
       console.log("Starting plan generation...");
-      // Generate a comprehensive plan - the response can be any object with data, even if it's not complete
+      // Generate a comprehensive plan
       const planResponse = await generatePlan('comprehensive');
       console.log("Plan generation result:", planResponse);
       
