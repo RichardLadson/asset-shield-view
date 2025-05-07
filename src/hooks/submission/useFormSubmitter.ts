@@ -7,7 +7,7 @@ import { useContextUpdater } from "./useContextUpdater";
 
 export const useFormSubmitter = () => {
   const navigate = useNavigate();
-  const { assessEligibility, generatePlan } = usePlanningContext();
+  const { assessEligibility, generatePlan, eligibilityResults } = usePlanningContext();
   const { updateContextFromFormData } = useContextUpdater();
 
   const handleSubmit = async (
@@ -84,27 +84,17 @@ export const useFormSubmitter = () => {
       });
       
       console.log("Starting eligibility assessment...");
-      // Generate an eligibility assessment
-      const eligibilityResponse = await assessEligibility();
-      console.log("Eligibility assessment result:", eligibilityResponse);
-      
-      // Check if eligibility assessment was successful
-      // Make sure we're checking a value that can be tested for truthiness
-      if (!eligibilityResponse || 
-          typeof eligibilityResponse !== 'object' || 
-          Object.keys(eligibilityResponse).length === 0) {
-        console.error("Invalid eligibility response:", eligibilityResponse);
-        throw new Error("Eligibility assessment returned an invalid response. Please try again.");
-      }
+      // Generate an eligibility assessment - don't check the return value directly
+      await assessEligibility();
+      console.log("Eligibility assessment completed");
       
       console.log("Starting plan generation...");
       // Generate a comprehensive plan
-      const planResponse = await generatePlan('comprehensive');
-      console.log("Plan generation result:", planResponse);
+      await generatePlan('comprehensive');
+      console.log("Plan generation completed");
       
-      // Navigate to results even if plan generation has issues
-      // This ensures users can at least see their eligibility results
-      console.log("Navigating to results page with available data...");
+      // Navigate to results page without relying on the return values
+      console.log("Navigating to results page...");
       navigate('/results');
       
     } catch (error: any) {
