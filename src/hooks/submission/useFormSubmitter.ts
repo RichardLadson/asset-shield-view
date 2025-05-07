@@ -7,7 +7,7 @@ import { useContextUpdater } from "./useContextUpdater";
 
 export const useFormSubmitter = () => {
   const navigate = useNavigate();
-  const { assessEligibility, generatePlan, eligibilityResults } = usePlanningContext();
+  const { assessEligibility, generatePlan, eligibilityResults, setClientInfo, setAssets, setIncome, clientInfo, assets, income } = usePlanningContext();
   const { updateContextFromFormData } = useContextUpdater();
 
   const handleSubmit = async (
@@ -73,7 +73,7 @@ export const useFormSubmitter = () => {
         totalIncome: formData.totalMonthlyIncome
       });
       
-      // Update context with form data
+      // Update context with form data FIRST before making API calls
       console.log("Updating context with form data...");
       updateContextFromFormData(formData, calculateAge);
       
@@ -83,17 +83,78 @@ export const useFormSubmitter = () => {
         description: "Processing your Medicaid Planning information...",
       });
       
+      // Wait a short time to ensure context is updated before proceeding
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       console.log("Starting eligibility assessment...");
-      // Generate an eligibility assessment - don't check the return value directly
+      // Generate an eligibility assessment
       await assessEligibility();
       console.log("Eligibility assessment completed");
+      
+      // Check if we have updated context values
+      if (!clientInfo?.name || !assets || !income) {
+        console.warn("Context may not be fully updated yet. Setting direct values from form data.");
+        
+        // Directly set required context values if they're missing
+        setClientInfo({
+          name: formData.applicantName,
+          age: applicantAge,
+          maritalStatus: formData.maritalStatus,
+          healthStatus: formData.healthStatus || "",
+          email: formData.email || "",
+          phone: formData.phone || "",
+          state: formData.state
+        });
+        
+        // Create assets object from form data
+        setAssets({
+          checking: {
+            applicant: parseFloat(formData.totalChecking || '0'),
+            spouse: 0,
+            joint: 0
+          },
+          savings: {
+            applicant: parseFloat(formData.totalSavings || '0'),
+            spouse: 0,
+            joint: 0
+          },
+          property: {
+            homeValue: parseFloat(formData.homeValue || '0'),
+            mortgageValue: parseFloat(formData.outstandingMortgage || '0'),
+            intentToReturnHome: formData.intentToReturnHome || false
+          },
+          investments: {
+            moneyMarket: parseFloat(formData.moneyMarket || '0'),
+            cds: parseFloat(formData.cds || '0'),
+            stocksBonds: parseFloat(formData.stocksBonds || '0'),
+            retirementAccounts: parseFloat(formData.retirementAccounts || '0')
+          }
+        });
+        
+        // Create income object from form data
+        setIncome({
+          socialSecurity: {
+            applicant: parseFloat(formData.socialSecurityIncome || '0'),
+            spouse: 0
+          },
+          pension: {
+            applicant: parseFloat(formData.pensionIncome || '0'),
+            spouse: 0
+          },
+          other: {
+            annuity: parseFloat(formData.annuityIncome || '0'),
+            rental: parseFloat(formData.rentalIncome || '0'),
+            investment: parseFloat(formData.investmentIncome || '0')
+          }
+        });
+      }
       
       console.log("Starting plan generation...");
       // Generate a comprehensive plan
       await generatePlan('comprehensive');
       console.log("Plan generation completed");
       
-      // Navigate to results page without relying on the return values
+      // Navigate to results page
       console.log("Navigating to results page...");
       navigate('/results');
       
