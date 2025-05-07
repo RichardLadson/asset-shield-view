@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Get the API URL from environment variable or use the provided ngrok URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://f23b-47-149-126-45.ngrok-free.app';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://365d-47-149-126-45.ngrok-free.app';
 
 // Log the API URL being used (helpful for debugging)
 console.log(`🔌 API Client: Using API base URL: ${API_BASE_URL}`);
