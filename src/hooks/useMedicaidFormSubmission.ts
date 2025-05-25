@@ -145,12 +145,17 @@ export const useMedicaidFormSubmission = () => {
       
       // Call assessEligibility with the prepared data directly instead of relying on context updates
       console.log("🚀 Calling assessEligibility with prepared data...");
-      await assessEligibility({
+      const result = await assessEligibility({
         clientInfo,
         assets,
         income,
         state: formData.state || ''
       });
+      
+      // Navigate to results if assessment was successful
+      if (result) {
+        navigate('/results');
+      }
       
     } catch (error) {
       console.error("Error during form submission:", error);
