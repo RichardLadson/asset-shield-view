@@ -46,8 +46,7 @@ const MedicaidIntakeForm = () => {
   const {
     activeSection,
     setActiveSection,
-    handleSubmit,
-    updateContextFromFormData
+    handleSubmit
   } = useMedicaidFormSubmission();
   
   // Log form validation state on load and when it changes
