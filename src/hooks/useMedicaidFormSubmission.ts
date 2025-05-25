@@ -1,9 +1,8 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { usePlanningContext } from "@/context/PlanningContext";
-import { useContextUpdater } from "./useContextUpdater";
-import { useFormSubmitter } from "./useFormSubmitter";
 import { MedicaidFormData } from "@/types/medicaidForm";
 
 export const useMedicaidFormSubmission = () => {
@@ -18,9 +17,6 @@ export const useMedicaidFormSubmission = () => {
     setState,
     assessEligibility 
   } = usePlanningContext();
-  
-  const { updateContextFromFormData } = useContextUpdater();
-  const { handleFormSubmit } = useFormSubmitter();
   
   const [activeSection, setActiveSection] = useState<string>("client-info");
 
@@ -112,7 +108,7 @@ export const useMedicaidFormSubmission = () => {
         state: formData.state
       });
       
-      // Update context for future use
+      // Update context with prepared data
       setClientInfo(clientInfo);
       setAssets(assets);
       setIncome(income);
@@ -147,12 +143,12 @@ export const useMedicaidFormSubmission = () => {
         setLivingInfo(livingInfo);
       }
       
-      // Wait a moment for state updates to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for state updates to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Call assessEligibility WITHOUT parameters (it will use the context)
+      // Call assessEligibility (it will use the updated context)
       console.log("🚀 Calling assessEligibility...");
-      const response = await assessEligibility(); // <-- NO PARAMETERS HERE
+      const response = await assessEligibility();
       
       if (response) {
         toast({
@@ -177,7 +173,6 @@ export const useMedicaidFormSubmission = () => {
   return {
     activeSection,
     setActiveSection,
-    handleSubmit,
-    updateContextFromFormData
+    handleSubmit
   };
 };
