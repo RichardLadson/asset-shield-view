@@ -108,7 +108,7 @@ export const useMedicaidFormSubmission = () => {
         state: formData.state
       });
       
-      // Update context with prepared data
+      // Update context with prepared data (for future use)
       setClientInfo(clientInfo);
       setAssets(assets);
       setIncome(income);
@@ -143,12 +143,14 @@ export const useMedicaidFormSubmission = () => {
         setLivingInfo(livingInfo);
       }
       
-      // Wait for state updates to complete
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Call assessEligibility (it handles its own success/error messaging and navigation)
-      console.log("🚀 Calling assessEligibility...");
-      await assessEligibility();
+      // Call assessEligibility with the prepared data directly instead of relying on context updates
+      console.log("🚀 Calling assessEligibility with prepared data...");
+      await assessEligibility({
+        clientInfo,
+        assets,
+        income,
+        state: formData.state || ''
+      });
       
     } catch (error) {
       console.error("Error during form submission:", error);
