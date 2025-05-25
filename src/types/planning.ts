@@ -27,7 +27,12 @@ export interface PlanningContextProps extends PlanningState {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setState: React.Dispatch<React.SetStateAction<string>>;
   setReportData: React.Dispatch<React.SetStateAction<any | null>>;
-  assessEligibility: () => Promise<void>;
+  assessEligibility: (overrideData?: {
+    clientInfo?: ClientInfo,
+    assets?: Assets,
+    income?: Income,
+    state?: string
+  }) => Promise<void>;
   runComprehensivePlanning: () => Promise<void>;
   generatePlan: (planType: string) => Promise<void>;
   generateReport: (reportType: string, format: string) => Promise<void>;

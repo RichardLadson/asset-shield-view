@@ -108,7 +108,7 @@ export const useMedicaidFormSubmission = () => {
         state: formData.state
       });
       
-      // Update context with prepared data first
+      // Update context with prepared data (for state persistence)
       setClientInfo(clientInfo);
       setAssets(assets);
       setIncome(income);
@@ -143,9 +143,14 @@ export const useMedicaidFormSubmission = () => {
         setLivingInfo(livingInfo);
       }
       
-      // Call assessEligibility without parameters (it will use the context data we just set)
-      console.log("🚀 Calling assessEligibility...");
-      await assessEligibility();
+      // Call assessEligibility with the prepared data directly to avoid async state issues
+      console.log("🚀 Calling assessEligibility with override data...");
+      await assessEligibility({
+        clientInfo,
+        assets,
+        income,
+        state: formData.state || ''
+      });
       
       // Navigate to results page
       navigate('/results');
