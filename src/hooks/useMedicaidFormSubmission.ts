@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
@@ -149,7 +150,7 @@ export const useMedicaidFormSubmission = () => {
       console.log("🚀 Calling assessEligibility...");
       const response = await assessEligibility();
       
-      if (response && response.eligible !== undefined) {
+      if (response) {
         toast({
           title: "Success!",
           description: "Your Medicaid planning form has been submitted successfully.",
