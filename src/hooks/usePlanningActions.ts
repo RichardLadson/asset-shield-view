@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/types";
 import api from "@/services/api";
@@ -21,10 +20,33 @@ export const usePlanningActions = (
 ) => {
   const navigate = useNavigate();
   
-  const assessEligibility = async () => {
-    if (!clientInfo || !assets || !income || !clientInfo.name || !clientInfo.age || !clientInfo.maritalStatus) {
+  const assessEligibility = async (overrideData?: {
+    clientInfo?: ClientInfo,
+    assets?: Assets,
+    income?: Income,
+    state?: string
+  }) => {
+    // Use provided data or fall back to context data
+    const effectiveClientInfo = overrideData?.clientInfo || clientInfo;
+    const effectiveAssets = overrideData?.assets || assets;
+    const effectiveIncome = overrideData?.income || income;
+    const effectiveState = overrideData?.state || clientInfo?.state || state;
+    
+    console.log("🔍 assessEligibility called with:", {
+      hasOverrideData: !!overrideData,
+      effectiveClientInfo,
+      effectiveAssets,
+      effectiveIncome,
+      effectiveState
+    });
+    
+    if (!effectiveClientInfo || !effectiveAssets || !effectiveIncome || 
+        !effectiveClientInfo.name || !effectiveClientInfo.age || !effectiveClientInfo.maritalStatus) {
       console.error("Missing required data for eligibility assessment:", { 
-        clientInfo, assets, income, state: clientInfo?.state || state 
+        clientInfo: effectiveClientInfo, 
+        assets: effectiveAssets, 
+        income: effectiveIncome, 
+        state: effectiveState 
       });
       toast({
         variant: "destructive",
@@ -37,20 +59,22 @@ export const usePlanningActions = (
     setLoading(true);
     try {
       // Ensure age is a number, not a string
-      const clientAge = typeof clientInfo.age === 'string' ? parseInt(clientInfo.age, 10) : clientInfo.age;
+      const clientAge = typeof effectiveClientInfo.age === 'string' 
+        ? parseInt(effectiveClientInfo.age, 10) 
+        : effectiveClientInfo.age;
       
       // Restructured payload to match backend expectations
       const payload = {
         clientInfo: {
-          name: clientInfo.name,
+          name: effectiveClientInfo.name,
           age: clientAge, // Ensure age is a number
-          maritalStatus: clientInfo.maritalStatus,
-          healthStatus: clientInfo.healthStatus || "stable",
-          isCrisis: clientInfo.isCrisis || false,
+          maritalStatus: effectiveClientInfo.maritalStatus,
+          healthStatus: effectiveClientInfo.healthStatus || "stable",
+          isCrisis: effectiveClientInfo.isCrisis || false,
         },
-        state: clientInfo.state || state,
-        assets: assets,
-        income: income,
+        state: effectiveState,
+        assets: effectiveAssets,
+        income: effectiveIncome,
       };
       
       console.log("Sending eligibility assessment payload:", JSON.stringify(payload, null, 2));
@@ -84,10 +108,30 @@ export const usePlanningActions = (
     }
   };
 
-  const generatePlan = async (planType: string = 'comprehensive') => {
-    if (!clientInfo || !assets || !income) {
+  const generatePlan = async (planType: string = 'comprehensive', overrideData?: {
+    clientInfo?: ClientInfo,
+    assets?: Assets,
+    income?: Income,
+    expenses?: Expenses,
+    medicalInfo?: MedicalInfo,
+    livingInfo?: LivingInfo,
+    state?: string
+  }) => {
+    // Use provided data or fall back to context data
+    const effectiveClientInfo = overrideData?.clientInfo || clientInfo;
+    const effectiveAssets = overrideData?.assets || assets;
+    const effectiveIncome = overrideData?.income || income;
+    const effectiveExpenses = overrideData?.expenses || expenses;
+    const effectiveMedicalInfo = overrideData?.medicalInfo || medicalInfo;
+    const effectiveLivingInfo = overrideData?.livingInfo || livingInfo;
+    const effectiveState = overrideData?.state || clientInfo?.state || state;
+    
+    if (!effectiveClientInfo || !effectiveAssets || !effectiveIncome) {
       console.error("Missing required data for plan generation:", { 
-        clientInfo, assets, income, state: clientInfo?.state || state 
+        clientInfo: effectiveClientInfo, 
+        assets: effectiveAssets, 
+        income: effectiveIncome, 
+        state: effectiveState 
       });
       toast({
         variant: "destructive",
@@ -102,19 +146,19 @@ export const usePlanningActions = (
       // Restructured payload to match backend expectations
       const payload = {
         clientInfo: {
-          name: clientInfo.name,
-          age: Number(clientInfo.age),
-          maritalStatus: clientInfo.maritalStatus,
-          healthStatus: clientInfo.healthStatus || undefined,
-          isCrisis: clientInfo.isCrisis || false,
-          state: clientInfo.state || state,
+          name: effectiveClientInfo.name,
+          age: Number(effectiveClientInfo.age),
+          maritalStatus: effectiveClientInfo.maritalStatus,
+          healthStatus: effectiveClientInfo.healthStatus || undefined,
+          isCrisis: effectiveClientInfo.isCrisis || false,
+          state: effectiveState,
         },
-        assets: assets,
-        income: income,
-        expenses: expenses || undefined,
-        medicalInfo: medicalInfo || undefined,
-        livingInfo: livingInfo || undefined,
-        state: clientInfo.state || state,
+        assets: effectiveAssets,
+        income: effectiveIncome,
+        expenses: effectiveExpenses || undefined,
+        medicalInfo: effectiveMedicalInfo || undefined,
+        livingInfo: effectiveLivingInfo || undefined,
+        state: effectiveState,
       };
       
       console.log("Sending planning request with data:", payload);
@@ -149,8 +193,16 @@ export const usePlanningActions = (
     }
   };
 
-  const runComprehensivePlanning = async () => {
-    const result = await generatePlan('comprehensive');
+  const runComprehensivePlanning = async (overrideData?: {
+    clientInfo?: ClientInfo,
+    assets?: Assets,
+    income?: Income,
+    expenses?: Expenses,
+    medicalInfo?: MedicalInfo,
+    livingInfo?: LivingInfo,
+    state?: string
+  }) => {
+    const result = await generatePlan('comprehensive', overrideData);
     if (result) {
       // Navigate to results only if we have data
       navigate('/results');

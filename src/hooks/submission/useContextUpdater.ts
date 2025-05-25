@@ -1,5 +1,3 @@
-
-import { useState } from "react";
 import { MedicaidFormData } from "@/types/medicaidForm";
 import { usePlanningContext } from "@/context/PlanningContext";
 
@@ -14,163 +12,111 @@ export const useContextUpdater = () => {
     setState
   } = usePlanningContext();
 
-  // Function to update context with form data
   const updateContextFromFormData = (formData: MedicaidFormData, calculateAge: (birthDate: Date) => number) => {
-    // Ensure we're using the correct birth date field
     const birthDate = formData.applicantBirthDate || formData.dateOfBirth;
-    
-    // Calculate age as a number
     const age = birthDate ? calculateAge(birthDate) : 0;
     
-    // Log the values before updating context to verify what's being passed
-    console.log("Updating context with form values:", {
-      fullName: formData.applicantName,
+    console.log("📋 Updating context from form data...");
+    console.log("Form data received:", {
+      name: formData.applicantName,
       age: age,
       state: formData.state,
-      maritalStatus: formData.maritalStatus
+      maritalStatus: formData.maritalStatus,
+      hasAssetData: !!(formData.totalChecking || formData.totalSavings),
+      hasIncomeData: !!(formData.applicantSocialSecurity || formData.applicantPension)
     });
     
-    // Update client info with properly structured data
+    // Update client info
     setClientInfo({
-      name: formData.applicantName,
-      age: age, // Make sure age is a number
-      maritalStatus: formData.maritalStatus,
-      healthStatus: formData.medicalStatus || "stable",
-      email: formData.email,
-      phone: formData.cellPhone || formData.homePhone,
-      state: formData.state,
-      // Add additional properties that might be expected by the API
-      isCrisis: formData.medicalStatus === 'critical' || false
+      name: formData.applicantName || '',
+      age: age,
+      maritalStatus: formData.maritalStatus || 'single',
+      healthStatus: formData.medicalStatus || 'stable',
+      email: formData.email || '',
+      phone: formData.cellPhone || formData.homePhone || '',
+      state: formData.state || '',
+      isCrisis: formData.medicalStatus === 'critical'
     });
 
-    // Update assets with a structure matching the API expectations
+    // Calculate and set assets in the format the backend expects
+    const countableAssets = 
+      parseFloat(formData.totalChecking || '0') +
+      parseFloat(formData.totalSavings || '0') +
+      parseFloat(formData.moneyMarket || '0') +
+      parseFloat(formData.cds || '0') +
+      parseFloat(formData.stocksBonds || '0') +
+      parseFloat(formData.lifeInsuranceCashValue || '0');
+
+    const nonCountableAssets = 
+      parseFloat(formData.homeValue || '0') +
+      parseFloat(formData.vehicleValue || '0') +
+      parseFloat(formData.householdProperty || '0') +
+      parseFloat(formData.retirementAccounts || '0');
+
+    console.log("📊 Setting assets:", { countable: countableAssets, non_countable: nonCountableAssets });
+    
+    // Set assets in the simple format expected by backend
     setAssets({
-      checking: {
-        total: parseFloat(formData.totalChecking) || 0
-      },
-      savings: {
-        total: parseFloat(formData.totalSavings) || 0
-      },
-      investments: {
-        moneyMarket: parseFloat(formData.moneyMarket) || 0,
-        cds: parseFloat(formData.cds) || 0,
-        stocksBonds: parseFloat(formData.stocksBonds) || 0,
-        retirementAccounts: parseFloat(formData.retirementAccounts) || 0,
-        total: parseFloat(formData.totalInvestmentAssets) || 0
-      },
-      lifeInsurance: {
-        faceValue: parseFloat(formData.lifeInsuranceFaceValue) || 0,
-        cashValue: parseFloat(formData.lifeInsuranceCashValue) || 0
-      },
-      property: {
-        homeValue: parseFloat(formData.homeValue) || 0,
-        mortgageValue: parseFloat(formData.outstandingMortgage) || 0,
-        otherRealEstate: parseFloat(formData.otherRealEstate) || 0,
-        intentToReturnHome: formData.intentToReturnHome,
-        primaryResidence: {
-          value: parseFloat(formData.homeValue) || 0,
-          exempt: true
-        },
-        otherProperties: parseFloat(formData.otherRealEstate) || 0
-      },
-      vehicles: {
-        primaryVehicle: {
-          value: parseFloat(formData.vehicleValue) || 0,
-          exempt: true
-        },
-        additionalVehicles: 0
-      },
-      exempt: {
-        householdProperty: parseFloat(formData.householdProperty) || 0,
-        vehicleValue: parseFloat(formData.vehicleValue) || 0,
-        burialPlots: formData.burialPlots,
-        otherAssets: parseFloat(formData.otherAssets) || 0
-      },
-      personalProperty: parseFloat(formData.householdProperty) || 0,
-      other: parseFloat(formData.otherAssets) || 0,
-      summary: {
-        totalAssetValue: parseFloat(formData.totalAssetValue) || 0
-      }
+      countable: countableAssets,
+      non_countable: nonCountableAssets
     });
 
-    // Update income with a structure matching the API expectations
-    setIncome({
-      socialSecurity: {
-        applicant: parseFloat(formData.applicantSocialSecurity) || 0,
-        spouse: parseFloat(formData.spouseSocialSecurity) || 0
-      },
-      pension: {
-        applicant: parseFloat(formData.applicantPension) || 0,
-        spouse: parseFloat(formData.spousePension) || 0
-      },
-      employment: {
-        applicant: 0,
-        spouse: 0
-      },
-      other: {
-        annuity: parseFloat(formData.annuityIncome) || 0,
-        rental: parseFloat(formData.rentalIncome) || 0,
-        investment: parseFloat(formData.investmentIncome) || 0,
-        other: formData.otherIncomeSources
-      },
-      rentalIncome: parseFloat(formData.rentalIncome) || 0,
-      investmentIncome: parseFloat(formData.investmentIncome) || 0,
-      summary: {
-        totalMonthlyIncome: parseFloat(formData.totalMonthlyIncome) || 0
-      }
-    });
+    // Calculate and set income in the format the backend expects
+    const totalIncome = {
+      social_security: parseFloat(formData.applicantSocialSecurity || '0') + parseFloat(formData.spouseSocialSecurity || '0'),
+      pension: parseFloat(formData.applicantPension || '0') + parseFloat(formData.spousePension || '0'),
+      annuity: parseFloat(formData.annuityIncome || '0'),
+      rental: parseFloat(formData.rentalIncome || '0'),
+      investment: parseFloat(formData.investmentIncome || '0')
+    };
 
-    // Update expenses
-    setExpenses({
-      housing: {
-        rentMortgage: parseFloat(formData.rentMortgage) || 0,
-        taxes: parseFloat(formData.realEstateTaxes) || 0,
-        utilities: parseFloat(formData.utilities) || 0,
-        insurance: parseFloat(formData.homeownersInsurance) || 0,
-        maintenance: parseFloat(formData.housingMaintenance) || 0,
-        total: parseFloat(formData.housingExpenseTotal) || 0
-      },
-      personal: {
-        food: parseFloat(formData.food) || 0,
-        transportation: parseFloat(formData.transportation) || 0,
-        clothing: parseFloat(formData.clothing) || 0,
-        total: parseFloat(formData.personalExpenseTotal) || 0
-      },
-      medical: {
-        nonReimbursed: parseFloat(formData.medicalNonReimbursed) || 0,
-        premiums: parseFloat(formData.healthInsurancePremiums) || 0,
-        extraordinary: parseFloat(formData.extraordinaryMedical) || 0,
-        total: parseFloat(formData.medicalExpenseTotal) || 0
-      },
-      summary: {
-        totalMonthlyExpenses: parseFloat(formData.totalMonthlyExpenses) || 0
-      }
-    });
+    console.log("📊 Setting income:", totalIncome);
+    
+    setIncome(totalIncome);
 
-    // Update medical info
-    setMedicalInfo({
-      diagnosis: formData.primaryDiagnosis,
-      facility: formData.facilityName,
-      facilityEntryDate: formData.facilityEntryDate,
-      status: formData.medicalStatus,
-      recentHospitalization: formData.recentHospitalStay,
-      hospitalizationDuration: formData.hospitalStayDuration,
-      longTermCareInsurance: formData.longTermCareInsurance,
-      insuranceDetails: formData.insuranceDetails
-    });
+    // Set expenses
+    const totalExpenses = {
+      housing: parseFloat(formData.rentMortgage || '0'),
+      utilities: parseFloat(formData.utilities || '0'),
+      food: parseFloat(formData.food || '0'),
+      medical: parseFloat(formData.medicalNonReimbursed || '0'),
+      health_insurance: parseFloat(formData.healthInsurancePremiums || '0'),
+      transportation: parseFloat(formData.transportation || '0'),
+      clothing: parseFloat(formData.clothing || '0')
+    };
 
-    // Update living info
-    setLivingInfo({
-      homeAddress: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`,
-      willReturnHome: formData.intentToReturnHome,
-      emergencyContact: {
-        name: formData.emergencyContactName,
-        phone: formData.emergencyContactPhone
-      }
-    });
+    console.log("📊 Setting expenses:", totalExpenses);
+    
+    setExpenses(totalExpenses);
 
     // Update state
-    setState(formData.state);
+    setState(formData.state || '');
+
+    // Set medical info if provided
+    if (formData.primaryDiagnosis || formData.facilityName) {
+      setMedicalInfo({
+        diagnosis: formData.primaryDiagnosis || '',
+        facility: formData.facilityName || '',
+        facilityEntryDate: formData.facilityEntryDate,
+        status: formData.medicalStatus || 'stable',
+        recentHospitalization: formData.recentHospitalStay || false,
+        hospitalizationDuration: formData.hospitalStayDuration || 0,
+        longTermCareInsurance: formData.longTermCareInsurance || false,
+        insuranceDetails: formData.insuranceDetails || ''
+      });
+    }
+
+    // Set living info if provided
+    if (formData.address || formData.emergencyContactName) {
+      setLivingInfo({
+        homeAddress: `${formData.address || ''}, ${formData.city || ''}, ${formData.state || ''} ${formData.zipCode || ''}`.trim(),
+        willReturnHome: formData.intentToReturnHome || false,
+        emergencyContact: {
+          name: formData.emergencyContactName || '',
+          phone: formData.emergencyContactPhone || ''
+        }
+      });
+    }
   };
 
   return { updateContextFromFormData };
