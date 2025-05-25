@@ -146,19 +146,9 @@ export const useMedicaidFormSubmission = () => {
       // Wait for state updates to complete
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Call assessEligibility (it will use the updated context)
+      // Call assessEligibility (it handles its own success/error messaging and navigation)
       console.log("🚀 Calling assessEligibility...");
-      const response = await assessEligibility();
-      
-      if (response) {
-        toast({
-          title: "Success!",
-          description: "Your Medicaid planning form has been submitted successfully.",
-        });
-        navigate("/results");
-      } else {
-        throw new Error("Eligibility assessment failed. Please try again.");
-      }
+      await assessEligibility();
       
     } catch (error) {
       console.error("Error during form submission:", error);
