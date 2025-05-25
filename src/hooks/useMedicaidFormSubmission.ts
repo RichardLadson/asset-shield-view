@@ -108,7 +108,7 @@ export const useMedicaidFormSubmission = () => {
         state: formData.state
       });
       
-      // Update context with prepared data (for future use)
+      // Update context with prepared data first
       setClientInfo(clientInfo);
       setAssets(assets);
       setIncome(income);
@@ -143,19 +143,12 @@ export const useMedicaidFormSubmission = () => {
         setLivingInfo(livingInfo);
       }
       
-      // Call assessEligibility with the prepared data directly instead of relying on context updates
-      console.log("🚀 Calling assessEligibility with prepared data...");
-      const result = await assessEligibility({
-        clientInfo,
-        assets,
-        income,
-        state: formData.state || ''
-      });
+      // Call assessEligibility without parameters (it will use the context data we just set)
+      console.log("🚀 Calling assessEligibility...");
+      await assessEligibility();
       
-      // Navigate to results if assessment was successful
-      if (result) {
-        navigate('/results');
-      }
+      // Navigate to results page
+      navigate('/results');
       
     } catch (error) {
       console.error("Error during form submission:", error);
