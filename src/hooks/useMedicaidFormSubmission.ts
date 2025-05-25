@@ -145,18 +145,30 @@ export const useMedicaidFormSubmission = () => {
       
       // Call assessEligibility with the prepared data directly to avoid async state issues
       console.log("🚀 Calling assessEligibility with override data...");
-      await assessEligibility({
+      const results = await assessEligibility({
         clientInfo,
         assets,
         income,
         state: formData.state || ''
       });
       
-      // Navigate to results page
-      navigate('/results');
+      console.log("✅ Assessment completed, results:", results);
+      
+      if (results) {
+        console.log("📍 Navigating to results page...");
+        // Navigate to results page
+        navigate('/results');
+      } else {
+        console.log("⚠️ No results received, staying on current page");
+        toast({
+          title: "Assessment Issue",
+          description: "The assessment completed but no results were returned. Please check the console for details.",
+          variant: "destructive",
+        });
+      }
       
     } catch (error) {
-      console.error("Error during form submission:", error);
+      console.error("❌ Error during form submission:", error);
       toast({
         title: "Submission Error",
         description: error instanceof Error ? error.message : "An unexpected error occurred.",

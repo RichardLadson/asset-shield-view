@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/types";
 import api from "@/services/api";
@@ -77,25 +78,37 @@ export const usePlanningActions = (
         income: effectiveIncome,
       };
       
-      console.log("Sending eligibility assessment payload:", JSON.stringify(payload, null, 2));
+      console.log("📤 Sending eligibility assessment payload:", JSON.stringify(payload, null, 2));
 
       const response = await api.eligibility.assessEligibility(payload);
-      console.log("Received eligibility response:", response);
+      console.log("📥 Received eligibility response:", response);
+      console.log("📥 Response status:", response?.status);
+      console.log("📥 Response data:", response?.data);
 
-      if (response.status === 'error') {
+      // Check if response has an error status
+      if (response?.status === 'error') {
         throw new Error(response.message || "Failed to assess eligibility");
       }
 
-      setEligibilityResults(response.data);
+      // Store the results - handle different response structures
+      const resultsData = response?.data || response;
+      console.log("💾 Storing eligibility results:", resultsData);
+      setEligibilityResults(resultsData);
+      
       toast({
         title: "Eligibility Assessed",
         description: "Your eligibility has been successfully assessed.",
       });
       
-      return response.data;
+      return resultsData;
       
     } catch (error: any) {
-      console.error("Eligibility Assessment Error:", error);
+      console.error("❌ Eligibility Assessment Error:", error);
+      console.error("❌ Error details:", {
+        message: error?.message,
+        response: error?.response,
+        stack: error?.stack
+      });
       setEligibilityResults(null);
       toast({
         variant: "destructive",
