@@ -103,7 +103,14 @@ export const eligibilityApi = {
       log("Sending API request to: /api/eligibility/assess");
       const response = await apiClient.post('/api/eligibility/assess', data);
       log("✅ API Response received:", response.data);
-      return response.data;
+      log("✅ Response status:", response.status);
+      log("✅ Response data type:", typeof response.data);
+      log("✅ Response data keys:", response.data ? Object.keys(response.data) : 'null');
+      log("✅ Full response.data structure:", JSON.stringify(response.data, null, 2));
+      
+      // The backend returns { status: 'success', data: {...} }
+      // We need to return the whole response object for the usePlanningActions hook
+      return response.data as ApiResponse<any>;
     } catch (error) {
       log("❌ Error in eligibility assessment API call:", error);
       if (axios.isAxiosError(error)) {

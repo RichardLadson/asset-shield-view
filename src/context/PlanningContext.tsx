@@ -27,9 +27,9 @@ const PlanningContext = createContext<PlanningContextProps>({
   setState: () => {},
   reportData: null,
   setReportData: () => {},
-  assessEligibility: async () => {},
-  runComprehensivePlanning: async () => {},
-  generatePlan: async () => {},
+  assessEligibility: async () => null,
+  runComprehensivePlanning: async () => null,
+  generatePlan: async () => null,
   generateReport: async () => {},
 });
 

@@ -32,8 +32,24 @@ export interface PlanningContextProps extends PlanningState {
     assets?: Assets,
     income?: Income,
     state?: string
-  }) => Promise<void>;
-  runComprehensivePlanning: () => Promise<void>;
-  generatePlan: (planType: string) => Promise<void>;
+  }) => Promise<any | null>;
+  runComprehensivePlanning: (overrideData?: {
+    clientInfo?: ClientInfo,
+    assets?: Assets,
+    income?: Income,
+    expenses?: Expenses,
+    medicalInfo?: MedicalInfo,
+    livingInfo?: LivingInfo,
+    state?: string
+  }) => Promise<any | null>;
+  generatePlan: (planType: string, overrideData?: {
+    clientInfo?: ClientInfo,
+    assets?: Assets,
+    income?: Income,
+    expenses?: Expenses,
+    medicalInfo?: MedicalInfo,
+    livingInfo?: LivingInfo,
+    state?: string
+  }) => Promise<any | null>;
   generateReport: (reportType: string, format: string) => Promise<void>;
 }

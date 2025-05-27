@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/types";
 import api from "@/services/api";
@@ -26,7 +25,7 @@ export const usePlanningActions = (
     assets?: Assets,
     income?: Income,
     state?: string
-  }) => {
+  }): Promise<any | null> => {
     // Use provided data or fall back to context data
     const effectiveClientInfo = overrideData?.clientInfo || clientInfo;
     const effectiveAssets = overrideData?.assets || assets;
@@ -78,37 +77,44 @@ export const usePlanningActions = (
         income: effectiveIncome,
       };
       
-      console.log("📤 Sending eligibility assessment payload:", JSON.stringify(payload, null, 2));
+      console.log("Sending eligibility assessment payload:", JSON.stringify(payload, null, 2));
 
       const response = await api.eligibility.assessEligibility(payload);
-      console.log("📥 Received eligibility response:", response);
-      console.log("📥 Response status:", response?.status);
-      console.log("📥 Response data:", response?.data);
-
-      // Check if response has an error status
-      if (response?.status === 'error') {
-        throw new Error(response.message || "Failed to assess eligibility");
+      console.log("Received eligibility response:", response);
+      console.log("Response status:", response?.status);
+      console.log("Response has data property:", 'data' in (response || {}));
+      
+      if (!response || (response.status && response.status === 'error')) {
+        throw new Error(response?.message || "Failed to assess eligibility");
       }
 
-      // Store the results - handle different response structures
-      const resultsData = response?.data || response;
-      console.log("💾 Storing eligibility results:", resultsData);
-      setEligibilityResults(resultsData);
-      
-      toast({
-        title: "Eligibility Assessed",
-        description: "Your eligibility has been successfully assessed.",
-      });
-      
-      return resultsData;
+      // The backend returns the data directly in the response, not wrapped in a data property
+      // Check if we have the eligibility fields directly in the response
+      if (response && (response.isResourceEligible !== undefined || response.isIncomeEligible !== undefined)) {
+        // The response IS the data
+        setEligibilityResults(response);
+        toast({
+          title: "Eligibility Assessed",
+          description: "Your eligibility has been successfully assessed.",
+        });
+        
+        return response;
+      } else if (response && response.data) {
+        // In case the backend changes to wrap it in data
+        setEligibilityResults(response.data);
+        toast({
+          title: "Eligibility Assessed", 
+          description: "Your eligibility has been successfully assessed.",
+        });
+        
+        return response.data;
+      } else {
+        console.error("No eligibility data in response:", response);
+        throw new Error("No data received from eligibility assessment");
+      }
       
     } catch (error: any) {
-      console.error("❌ Eligibility Assessment Error:", error);
-      console.error("❌ Error details:", {
-        message: error?.message,
-        response: error?.response,
-        stack: error?.stack
-      });
+      console.error("Eligibility Assessment Error:", error);
       setEligibilityResults(null);
       toast({
         variant: "destructive",

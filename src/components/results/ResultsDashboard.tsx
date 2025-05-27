@@ -58,15 +58,26 @@ const ResultsDashboard = () => {
 
   // Check if we have results, if not redirect to form
   useEffect(() => {
-    if (!eligibilityResults && !planningResults) {
-      toast({
-        title: "No Results Available",
-        description: "Please complete the form to see your results.",
-        variant: "destructive",
-      });
-      navigate("/asset-input");
-    }
-  }, [eligibilityResults, planningResults, navigate]);
+    console.log("🔍 ResultsDashboard mounted");
+    console.log("📊 eligibilityResults:", eligibilityResults);
+    console.log("📊 planningResults:", planningResults);
+    console.log("⏳ loading:", loading);
+    
+    // Add a small delay to allow context to update after navigation
+    const checkTimer = setTimeout(() => {
+      if (!loading && !eligibilityResults && !planningResults) {
+        console.log("❌ No results available after delay, redirecting to form");
+        toast({
+          title: "No Results Available",
+          description: "Please complete the form to see your results.",
+          variant: "destructive",
+        });
+        navigate("/asset-input");
+      }
+    }, 500); // 500ms delay to allow context to update
+    
+    return () => clearTimeout(checkTimer);
+  }, [eligibilityResults, planningResults, loading, navigate]);
 
   // Prepare asset data for charts
   const assetData = Object.entries(assets?.investments || {})
@@ -265,6 +276,18 @@ const ResultsDashboard = () => {
         >
           Go to Intake Form
         </Button>
+      </div>
+    );
+  }
+
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-shield-navy mb-4" />
+          <p className="text-gray-600">Loading your results...</p>
+        </div>
       </div>
     );
   }
