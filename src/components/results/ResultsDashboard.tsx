@@ -36,6 +36,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlanningContext } from "@/context/PlanningContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
@@ -61,6 +63,9 @@ const ResultsDashboard = () => {
     console.log("🔍 ResultsDashboard mounted");
     console.log("📊 eligibilityResults:", eligibilityResults);
     console.log("📊 planningResults:", planningResults);
+    console.log("📊 assets:", assets);
+    console.log("📊 income:", income);
+    console.log("📊 clientInfo:", clientInfo);
     console.log("⏳ loading:", loading);
     
     // Add a small delay to allow context to update after navigation
@@ -79,85 +84,121 @@ const ResultsDashboard = () => {
     return () => clearTimeout(checkTimer);
   }, [eligibilityResults, planningResults, loading, navigate]);
 
-  // Prepare asset data for charts
-  const assetData = Object.entries(assets?.investments || {})
-    .map(([name, value]) => ({
-      name: formatAssetName(name),
-      value: Number(value) || 0,
-      protected: Math.round((Number(value) || 0) * 0.7) // Example protection calculation
-    }))
-    .concat(
-      Object.entries({
-        checking: (assets?.checking?.applicant || 0) + 
-                 (assets?.checking?.spouse || 0) + 
-                 (assets?.checking?.joint || 0),
-        savings: (assets?.savings?.applicant || 0) + 
-                (assets?.savings?.spouse || 0) + 
-                (assets?.savings?.joint || 0),
-        property: (assets?.property?.homeValue || 0) - 
-                 (assets?.property?.mortgageValue || 0)
-      }).map(([name, value]) => ({
-        name: formatAssetName(name),
-        value: Number(value) || 0,
-        protected: name === 'property' && assets?.property?.intentToReturnHome 
-          ? Number(value) 
-          : Math.round((Number(value) || 0) * 0.5) // Example protection calculation
-      }))
-    )
-    .filter(item => item.value > 0);
-
-  // Format asset names for display
-  function formatAssetName(key: string): string {
-    const nameMap: Record<string, string> = {
-      moneyMarket: "Money Market",
-      cds: "CDs",
-      stocksBonds: "Stocks & Bonds",
-      retirementAccounts: "Retirement",
-      checking: "Bank Accounts",
-      savings: "Savings",
-      property: "Real Estate"
-    };
-    
-    return nameMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
-  }
-
-  // Calculate total assets and protected assets
-  const totalAssets = assetData.reduce((sum, item) => sum + item.value, 0);
-  const totalProtected = assetData.reduce((sum, item) => sum + item.protected, 0);
-  const protectionPercentage = Math.round((totalProtected / totalAssets) * 100) || 0;
+  // Get actual values from eligibility results and context
+  const actualCountableAssets = eligibilityResults?.countableAssets || assets?.countable || 0;
+  const actualNonCountableAssets = eligibilityResults?.nonCountableAssets || assets?.nonCountable || 0;
+  const actualTotalIncome = eligibilityResults?.totalIncome || income?.socialSecurity || 0;
+  
+  // Get state-specific limits from API response
+  // If API didn't return limits, show error message instead of guessing
+  const actualResourceLimit = eligibilityResults?.resourceLimit;
+  const actualIncomeLimit = eligibilityResults?.incomeLimit;
+  
+  // Check if we have valid limits from the API
+  const hasValidLimits = actualResourceLimit !== null && actualResourceLimit !== undefined && 
+                        actualIncomeLimit !== null && actualIncomeLimit !== undefined;
+  
+  // Debug logging
+  console.log("📊 Dashboard Data Debug:", {
+    eligibilityResults,
+    actualCountableAssets,
+    actualTotalIncome,
+    actualResourceLimit,
+    actualIncomeLimit,
+    assets,
+    income
+  });
+  
+  // Calculate total monthly expenses - this should include ALL expenses, not just medical
+  const totalMonthlyExpenses = 
+    (expenses?.housing || 0) +
+    (expenses?.utilities || 0) +
+    (expenses?.food || 0) +
+    (expenses?.transportation || 0) +
+    (expenses?.clothing || 0) +
+    (expenses?.medicalTotal || expenses?.medical || 0) +
+    (expenses?.healthInsurance || 0);
+  
+  // Use total monthly expenses for depletion calculation, with fallback to default nursing home cost
+  const actualMonthlyBurnRate = totalMonthlyExpenses || planningResults?.monthlyCareCost || 9500;
+  
+  console.log("📊 Monthly Expenses Debug:", {
+    expenses: expenses,
+    totalMonthlyExpenses: totalMonthlyExpenses,
+    defaultCost: 9500,
+    actualBurnRate: actualMonthlyBurnRate
+  });
   
   // Prepare key metrics data based on the results from API
-  const keyMetrics = {
+  const keyMetrics = hasValidLimits ? {
     // Asset metrics
-    assetsAtRisk: totalAssets,
-    monthlyLTCCost: planningResults?.monthlyCareCost || 9500,
-    monthsUntilDepleted: Math.round(totalAssets / (planningResults?.monthlyCareCost || 9500)),
-    protectableAssets: totalProtected,
-    totalAssetSavings: totalProtected,
+    assetsAtRisk: actualCountableAssets,
+    monthlyLTCCost: actualMonthlyBurnRate,
+    monthsUntilDepleted: actualMonthlyBurnRate > 0 ? Math.round(actualCountableAssets / actualMonthlyBurnRate) : 0,
+    protectableAssets: Math.min(actualCountableAssets * 0.5, 400000), // Example: can protect up to 50% or $400k
+    totalAssetSavings: Math.min(actualCountableAssets * 0.5, 400000),
     
     // Income metrics
-    clientMonthlyIncome: (
-      (income?.socialSecurity?.applicant || 0) + 
-      (income?.pension?.applicant || 0) + 
-      (income?.other?.annuity || 0) + 
-      (income?.other?.rental || 0) + 
-      (income?.other?.investment || 0)
-    ),
-    medicaidIncomeLimit: eligibilityResults?.incomeLimit || 2742,
-    monthlyIncomeAtRisk: Math.max(0, 
-      ((income?.socialSecurity?.applicant || 0) + 
-       (income?.pension?.applicant || 0) + 
-       (income?.other?.annuity || 0) + 
-       (income?.other?.rental || 0) + 
-       (income?.other?.investment || 0)) - 
-      (eligibilityResults?.incomeLimit || 2742)
-    ),
-    protectableIncome: eligibilityResults?.protectableIncome || 1350,
+    clientMonthlyIncome: actualTotalIncome,
+    medicaidIncomeLimit: actualIncomeLimit,
+    monthlyIncomeAtRisk: Math.max(0, actualTotalIncome - actualIncomeLimit),
+    protectableIncome: Math.min(Math.max(0, actualTotalIncome - actualIncomeLimit), 1350), // Can protect up to $1350/month
     
     // Medicaid requirements
-    medicaidAssetLimit: eligibilityResults?.resourceLimit || 2000,
-    assetSpendDownRequired: Math.max(0, totalAssets - (eligibilityResults?.resourceLimit || 2000)),
+    medicaidAssetLimit: actualResourceLimit,
+    assetSpendDownRequired: eligibilityResults?.excessResources ?? Math.max(0, actualCountableAssets - actualResourceLimit),
+    
+    // Additional data from eligibility results
+    isResourceEligible: eligibilityResults?.isResourceEligible || false,
+    isIncomeEligible: eligibilityResults?.isIncomeEligible || false,
+    urgency: eligibilityResults?.urgency || "Medium",
+  } : {
+    // Fallback if no valid limits from API
+    assetsAtRisk: actualCountableAssets,
+    monthlyLTCCost: actualMonthlyBurnRate,
+    monthsUntilDepleted: actualMonthlyBurnRate > 0 ? Math.round(actualCountableAssets / actualMonthlyBurnRate) : 0,
+    protectableAssets: 0,
+    totalAssetSavings: 0,
+    clientMonthlyIncome: actualTotalIncome,
+    medicaidIncomeLimit: 0,
+    monthlyIncomeAtRisk: 0,
+    protectableIncome: 0,
+    medicaidAssetLimit: 0,
+    assetSpendDownRequired: 0,
+    isResourceEligible: false,
+    isIncomeEligible: false,
+    urgency: "Unknown - Unable to determine state-specific limits",
   };
+  
+  console.log("📊 Key Metrics Calculated:", keyMetrics);
+  
+  // Prepare asset data for charts - simplified for current data structure
+  const assetData = [
+    {
+      name: "Countable Assets",
+      value: actualCountableAssets,
+      protected: keyMetrics.protectableAssets || 0
+    },
+    {
+      name: "Non-Countable Assets", 
+      value: actualNonCountableAssets,
+      protected: actualNonCountableAssets // Non-countable assets are already protected
+    }
+  ].filter(item => item.value > 0);
+  
+  // Calculate total assets and protected assets
+  const totalAssets = actualCountableAssets + actualNonCountableAssets;
+  const totalProtected = keyMetrics.protectableAssets + actualNonCountableAssets;
+  const protectionPercentage = totalAssets > 0 ? Math.round((totalProtected / totalAssets) * 100) : 0;
+  
+  // Debug the protection calculation
+  console.log("📊 Protection Calculation Debug:", {
+    totalAssets,
+    totalProtected,
+    protectableAssets: keyMetrics.protectableAssets,
+    nonCountableAssets: actualNonCountableAssets,
+    percentage: protectionPercentage
+  });
 
   // Prepare data for eligibility charts
   const eligibilityData = [
@@ -186,8 +227,8 @@ const ResultsDashboard = () => {
     },
   ];
 
-  // Strategies are from the planning results or fallback to mock data
-  const strategies = planningResults?.strategies || [
+  // Strategies are from the planning results (check both direct and data.strategies) or fallback to mock data
+  const strategies = planningResults?.strategies || planningResults?.data?.strategies || [
     { 
       id: 1, 
       name: "Irrevocable Trust",
@@ -227,21 +268,537 @@ const ResultsDashboard = () => {
     }).format(value);
   };
 
+  // Generate HTML report
+  const generateHTMLReport = (reportType: string) => {
+    const isDetailed = reportType === 'detailed' || reportType === 'professional';
+    
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Medicaid Planning Report - ${clientInfo?.name || 'Client'}</title>
+  <style>
+    @page { size: letter; margin: 0.75in; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      line-height: 1.6; 
+      margin: 0;
+      color: #333;
+      font-size: 11pt;
+    }
+    h1 { 
+      color: #0C3B5E; 
+      font-size: 24pt;
+      margin-bottom: 10px;
+      border-bottom: 3px solid #0C3B5E;
+      padding-bottom: 10px;
+    }
+    h2 { 
+      color: #0C3B5E; 
+      margin-top: 30px;
+      font-size: 16pt;
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 5px;
+    }
+    h3 {
+      color: #0C3B5E;
+      font-size: 14pt;
+      margin-top: 20px;
+    }
+    .header {
+      margin-bottom: 30px;
+    }
+    .section { 
+      margin-bottom: 30px; 
+      page-break-inside: avoid;
+    }
+    .metric { 
+      background: #f8f9fa; 
+      padding: 15px; 
+      margin: 10px 0; 
+      border-radius: 5px;
+      border: 1px solid #e9ecef;
+      page-break-inside: avoid;
+    }
+    .warning { color: #dc2626; font-weight: bold; }
+    .success { color: #16a34a; font-weight: bold; }
+    .info { color: #0C3B5E; font-weight: bold; }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin: 20px 0;
+      page-break-inside: avoid;
+    }
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 10px 8px; 
+      text-align: left; 
+    }
+    th { 
+      background-color: #0C3B5E; 
+      color: white;
+      font-weight: bold;
+    }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+    .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      font-size: 10pt;
+      color: #666;
+    }
+    @media print { 
+      body { margin: 0; }
+      .metric { background: #f8f9fa !important; }
+      th { background-color: #0C3B5E !important; color: white !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Medicaid Planning Report</h1>
+    <table style="border: none; margin-top: 20px;">
+      <tr>
+        <td style="border: none; padding: 5px 0;"><strong>Client:</strong></td>
+        <td style="border: none; padding: 5px 0;">${clientInfo?.name || 'N/A'}</td>
+        <td style="border: none; padding: 5px 0; padding-left: 40px;"><strong>Report Type:</strong></td>
+        <td style="border: none; padding: 5px 0;">${reportType === 'professional' ? 'Professional' : 'Detailed'}</td>
+      </tr>
+      <tr>
+        <td style="border: none; padding: 5px 0;"><strong>Date:</strong></td>
+        <td style="border: none; padding: 5px 0;">${new Date().toLocaleDateString()}</td>
+        <td style="border: none; padding: 5px 0; padding-left: 40px;"><strong>State:</strong></td>
+        <td style="border: none; padding: 5px 0;">${clientInfo?.state || 'N/A'}</td>
+      </tr>
+    </table>
+  </div>
+  
+  <div class="section">
+    <h2>Executive Summary</h2>
+    <p>Based on your financial assessment, qualifying for Medicaid without proper planning would require you to spend down 
+    <span class="warning">${formatCurrency(keyMetrics.assetSpendDownRequired)}</span> of your assets.</p>
+    
+    <p>With proper Medicaid planning strategies, you can protect approximately 
+    <span class="success">${formatCurrency(keyMetrics.protectableAssets)}</span> of your assets 
+    (${protectionPercentage}% of total assets) while still qualifying for benefits.</p>
+  </div>
+  
+  <div class="section">
+    <h2>Current Financial Situation</h2>
+    <div class="metric">
+      <strong>Total Countable Assets:</strong> ${formatCurrency(actualCountableAssets)}<br>
+      <strong>Total Monthly Income:</strong> ${formatCurrency(actualTotalIncome)}<br>
+      <strong>Total Monthly Expenses:</strong> ${formatCurrency(keyMetrics.monthlyLTCCost)}<br>
+      <strong>Time Until Asset Depletion:</strong> ${keyMetrics.monthsUntilDepleted} months
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Medicaid Eligibility Analysis</h2>
+    <table>
+      <tr>
+        <th>Criteria</th>
+        <th>Your Situation</th>
+        <th>Medicaid Limit</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>Asset Limit</td>
+        <td>${formatCurrency(actualCountableAssets)}</td>
+        <td>${formatCurrency(keyMetrics.medicaidAssetLimit)}</td>
+        <td class="${keyMetrics.isResourceEligible ? 'success' : 'warning'}">
+          ${keyMetrics.isResourceEligible ? 'Eligible' : `${formatCurrency(keyMetrics.assetSpendDownRequired)} over limit`}
+        </td>
+      </tr>
+      <tr>
+        <td>Income Limit</td>
+        <td>${formatCurrency(actualTotalIncome)}</td>
+        <td>${formatCurrency(keyMetrics.medicaidIncomeLimit)}</td>
+        <td class="${keyMetrics.isIncomeEligible ? 'success' : 'warning'}">
+          ${keyMetrics.isIncomeEligible ? 'Eligible' : `${formatCurrency(keyMetrics.monthlyIncomeAtRisk)} over limit`}
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  ${isDetailed ? `
+  <div class="section">
+    <h2>Recommended Strategies</h2>
+    ${strategies.map(strategy => `
+      <div class="metric">
+        <h3>${strategy.name}</h3>
+        <p>${strategy.description}</p>
+        <p><strong>Effectiveness:</strong> ${strategy.effectiveness}</p>
+        <p><strong>Timing:</strong> ${strategy.timing}</p>
+      </div>
+    `).join('')}
+  </div>
+  ` : ''}
+  
+  <div class="footer">
+    <p><strong>Disclaimer:</strong> This report is for informational purposes only and does not constitute legal or financial advice. 
+    Medicaid rules are complex and vary by state. Please consult with a qualified Medicaid planning attorney or elder law specialist 
+    for personalized advice tailored to your specific situation.</p>
+    <p style="margin-top: 10px; text-align: center;">
+      <em>Generated by Shield Your Assets Medicaid Planning System</em>
+    </p>
+  </div>
+</body>
+</html>
+    `;
+  };
+
+  // Check if device is mobile
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  // Download report as HTML fallback for mobile
+  const downloadAsHTML = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/html' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.replace('.pdf', '.html');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Generate PDF using jsPDF
+  const generatePDFWithJsPDF = async (reportType: string) => {
+    const filename = `medicaid-plan-${reportType}-${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    try {
+      // Create a new jsPDF instance
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Set up fonts and colors
+      const primaryColor = [12, 59, 94]; // Shield Navy color
+      const successColor = [22, 163, 74];
+      const warningColor = [220, 38, 38];
+      
+      // Add header
+      pdf.setFontSize(24);
+      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.text('Medicaid Planning Report', 20, 30);
+      
+      // Add detailed client info
+      pdf.setFontSize(11);
+      pdf.setTextColor(0, 0, 0);
+      let yPos = 45;
+      
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Client Information', 20, yPos);
+      pdf.setFont(undefined, 'normal');
+      yPos += 8;
+      
+      // Basic Info
+      pdf.text(`Name: ${clientInfo?.name || 'N/A'}`, 20, yPos);
+      pdf.text(`Age: ${clientInfo?.age || 'N/A'}`, 120, yPos);
+      yPos += 6;
+      
+      pdf.text(`State: ${clientInfo?.state || 'N/A'}`, 20, yPos);
+      pdf.text(`Marital Status: ${clientInfo?.maritalStatus || 'N/A'}`, 120, yPos);
+      yPos += 6;
+      
+      pdf.text(`Health Status: ${clientInfo?.healthStatus || 'N/A'}`, 20, yPos);
+      pdf.text(`Report Date: ${new Date().toLocaleDateString()}`, 120, yPos);
+      yPos += 6;
+      
+      pdf.text(`Report Type: ${reportType === 'professional' ? 'Professional' : 'Detailed'}`, 20, yPos);
+      yPos += 10;
+      
+      // Assets Summary
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Assets Summary', 20, yPos);
+      pdf.setFont(undefined, 'normal');
+      yPos += 6;
+      
+      pdf.text(`Total Countable Assets: $${actualCountableAssets.toLocaleString()}`, 20, yPos);
+      pdf.text(`Non-Countable Assets: $${actualNonCountableAssets.toLocaleString()}`, 120, yPos);
+      yPos += 6;
+      
+      if (assets?.checking || assets?.savings || assets?.moneyMarket) {
+        pdf.text(`Cash Assets: $${((assets?.checking || 0) + (assets?.savings || 0) + (assets?.moneyMarket || 0)).toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      if (assets?.homeValue) {
+        pdf.text(`Home Value: $${assets.homeValue.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      if (assets?.vehicles) {
+        pdf.text(`Vehicles: $${assets.vehicles.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      yPos += 5;
+      
+      // Income Summary
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Income Summary', 20, yPos);
+      pdf.setFont(undefined, 'normal');
+      yPos += 6;
+      
+      pdf.text(`Total Monthly Income: $${actualTotalIncome.toLocaleString()}`, 20, yPos);
+      yPos += 5;
+      
+      if (income?.socialSecurity) {
+        pdf.text(`Social Security: $${income.socialSecurity.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      if (income?.pension) {
+        pdf.text(`Pension: $${income.pension.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      if (income?.annuity || income?.rental || income?.investment) {
+        const otherIncome = (income?.annuity || 0) + (income?.rental || 0) + (income?.investment || 0);
+        pdf.text(`Other Income: $${otherIncome.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      // Expenses Summary
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Monthly Expenses Summary', 20, yPos);
+      pdf.setFont(undefined, 'normal');
+      yPos += 6;
+      
+      if (expenses?.housing) {
+        pdf.text(`Housing: $${expenses.housing.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      if (expenses?.medical || expenses?.healthInsurance) {
+        const totalMedical = (expenses?.medical || 0) + (expenses?.healthInsurance || 0) + (expenses?.medicalTotal || 0);
+        pdf.text(`Medical Expenses: $${totalMedical.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      if (expenses?.food) {
+        pdf.text(`Food: $${expenses.food.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      if (expenses?.utilities) {
+        pdf.text(`Utilities: $${expenses.utilities.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      if (expenses?.transportation) {
+        pdf.text(`Transportation: $${expenses.transportation.toLocaleString()}`, 20, yPos);
+        yPos += 5;
+      }
+      
+      yPos += 10;
+      
+      // Add executive summary
+      pdf.setFontSize(14);
+      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Executive Summary', 20, yPos);
+      pdf.setFont(undefined, 'normal');
+      yPos += 8;
+      
+      pdf.setFontSize(11);
+      pdf.setTextColor(0, 0, 0);
+      const summaryText = `Based on your financial assessment, qualifying for Medicaid without proper planning would require you to spend down $${keyMetrics.assetSpendDownRequired.toLocaleString()} of your assets.`;
+      const lines = pdf.splitTextToSize(summaryText, 170);
+      pdf.text(lines, 20, yPos);
+      yPos += lines.length * 5 + 5;
+      
+      pdf.setTextColor(successColor[0], successColor[1], successColor[2]);
+      const savingsText = `With proper Medicaid planning strategies, you can protect approximately $${keyMetrics.protectableAssets.toLocaleString()} of your assets (${protectionPercentage}% of total assets) while still qualifying for benefits.`;
+      const savingsLines = pdf.splitTextToSize(savingsText, 170);
+      pdf.text(savingsLines, 20, yPos);
+      yPos += savingsLines.length * 5 + 10;
+      
+      // Add financial situation
+      pdf.setFontSize(14);
+      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Current Financial Situation', 20, yPos);
+      yPos += 8;
+      
+      pdf.setFontSize(11);
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont(undefined, 'normal');
+      
+      // Financial metrics table
+      const financialData = [
+        ['Total Countable Assets:', `$${actualCountableAssets.toLocaleString()}`],
+        ['Total Monthly Income:', `$${actualTotalIncome.toLocaleString()}`],
+        ['Total Monthly Expenses:', `$${keyMetrics.monthlyLTCCost.toLocaleString()}`],
+        ['Time Until Asset Depletion:', `${keyMetrics.monthsUntilDepleted} months`]
+      ];
+      
+      financialData.forEach(([label, value]) => {
+        pdf.text(label, 20, yPos);
+        pdf.text(value, 100, yPos);
+        yPos += 6;
+      });
+      yPos += 10;
+      
+      // Add eligibility analysis
+      pdf.setFontSize(14);
+      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Medicaid Eligibility Analysis', 20, yPos);
+      yPos += 10;
+      
+      // Simple table for eligibility
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      
+      // Table headers
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Criteria', 20, yPos);
+      pdf.text('Your Situation', 60, yPos);
+      pdf.text('Medicaid Limit', 100, yPos);
+      pdf.text('Status', 140, yPos);
+      yPos += 6;
+      
+      // Draw line under headers
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(20, yPos - 2, 190, yPos - 2);
+      
+      // Asset row
+      pdf.setFont(undefined, 'normal');
+      pdf.text('Asset Limit', 20, yPos);
+      pdf.text(`$${actualCountableAssets.toLocaleString()}`, 60, yPos);
+      pdf.text(`$${keyMetrics.medicaidAssetLimit.toLocaleString()}`, 100, yPos);
+      const resourceColor = keyMetrics.isResourceEligible ? successColor : warningColor;
+      pdf.setTextColor(resourceColor[0], resourceColor[1], resourceColor[2]);
+      pdf.text(keyMetrics.isResourceEligible ? 'Eligible' : `$${keyMetrics.assetSpendDownRequired.toLocaleString()} over`, 140, yPos);
+      yPos += 6;
+      
+      // Income row
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Income Limit', 20, yPos);
+      pdf.text(`$${actualTotalIncome.toLocaleString()}`, 60, yPos);
+      pdf.text(`$${keyMetrics.medicaidIncomeLimit.toLocaleString()}`, 100, yPos);
+      const incomeColor = keyMetrics.isIncomeEligible ? successColor : warningColor;
+      pdf.setTextColor(incomeColor[0], incomeColor[1], incomeColor[2]);
+      pdf.text(keyMetrics.isIncomeEligible ? 'Eligible' : `$${keyMetrics.monthlyIncomeAtRisk.toLocaleString()} over`, 140, yPos);
+      yPos += 15;
+      
+      // Add strategies if professional report
+      if ((reportType === 'professional' || reportType === 'detailed') && yPos < 250) {
+        pdf.setFontSize(14);
+        pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Recommended Strategies', 20, yPos);
+        yPos += 8;
+        
+        pdf.setFontSize(11);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont(undefined, 'normal');
+        
+        strategies.slice(0, 2).forEach((strategy: any) => {
+          if (yPos > 250) {
+            pdf.addPage();
+            yPos = 30;
+          }
+          
+          pdf.setFont(undefined, 'bold');
+          pdf.text(strategy.name, 20, yPos);
+          pdf.setFont(undefined, 'normal');
+          yPos += 6;
+          
+          const descLines = pdf.splitTextToSize(strategy.description, 170);
+          pdf.text(descLines, 20, yPos);
+          yPos += descLines.length * 5 + 8;
+        });
+      }
+      
+      // Add footer
+      const pageCount = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text('Generated by Shield Your Assets Medicaid Planning System', 105, 285, { align: 'center' });
+        pdf.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+      }
+      
+      // Save the PDF
+      pdf.save(filename);
+      
+      toast({
+        title: "PDF Downloaded",
+        description: `Your ${reportType} report has been downloaded as ${filename}`,
+      });
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // Fallback to HTML method
+      generatePDF(reportType);
+    }
+  };
+  
+  // Original browser print dialog method (fallback)
+  const generatePDF = (reportType: string) => {
+    const reportHtml = generateHTMLReport(reportType);
+    const filename = `medicaid-plan-${reportType}-${new Date().toISOString().split('T')[0]}`;
+    
+    // For mobile devices, download as HTML
+    if (isMobileDevice()) {
+      downloadAsHTML(reportHtml, `${filename}.html`);
+      toast({
+        title: "Report Downloaded",
+        description: "Your report has been downloaded as an HTML file that can be opened in any browser.",
+      });
+      return;
+    }
+    
+    // For desktop, use print dialog
+    const printWindow = window.open('', '_blank');
+    
+    if (printWindow) {
+      printWindow.document.write(reportHtml);
+      printWindow.document.close();
+      
+      // Add print styles for PDF generation
+      const style = printWindow.document.createElement('style');
+      style.textContent = `
+        @media print {
+          @page { margin: 0.5in; }
+          body { margin: 0; }
+        }
+      `;
+      printWindow.document.head.appendChild(style);
+      
+      // Trigger print dialog after content loads
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          // Close window after print dialog
+          printWindow.onafterprint = () => {
+            printWindow.close();
+          };
+        }, 250);
+      };
+    }
+  };
+
+  // Handle print
+  const handlePrint = () => {
+    window.print();
+  };
+
   // Generate the PDF report
   const handleGenerateReport = async (reportType: string = 'detailed') => {
     try {
-      await generateReport(reportType, 'html');
-      
-      // Check if report data is available
-      if (reportData?.reportId) {
-        // This would open the report in a new tab or download it
-        window.open(`${import.meta.env.VITE_API_URL}/api/reports/download/${reportData.reportId}`, '_blank');
-      } else {
-        toast({
-          title: "Report Ready",
-          description: "Your report has been generated successfully.",
-        });
-      }
+      // Use jsPDF for direct PDF generation
+      await generatePDFWithJsPDF(reportType);
     } catch (error) {
       console.error("Error generating report:", error);
       toast({
@@ -291,9 +848,45 @@ const ResultsDashboard = () => {
       </div>
     );
   }
+  
+  // Also show loading if we don't have eligibility results yet
+  if (!eligibilityResults) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-shield-navy mb-4" />
+          <p className="text-gray-600">Preparing your results...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
+      <style>{`
+        @media print {
+          /* Hide navigation and buttons when printing */
+          nav, .no-print { display: none !important; }
+          /* Adjust margins for print */
+          .container { margin: 0 !important; padding: 20px !important; }
+          /* Ensure charts print properly */
+          .recharts-wrapper { page-break-inside: avoid; }
+          /* Force color printing */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+      `}</style>
+      <div className="container mx-auto px-4 py-8">
+      {!hasValidLimits && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800 font-medium">
+            ⚠️ Unable to retrieve state-specific Medicaid limits for {clientInfo?.state || 'your state'}.
+          </p>
+          <p className="text-yellow-700 text-sm mt-1">
+            The calculations below may not be accurate. Please verify the current Medicaid limits for your state.
+          </p>
+        </div>
+      )}
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-shield-navy">Asset Protection Results</h1>
@@ -301,8 +894,12 @@ const ResultsDashboard = () => {
             Based on your asset and income information, here's how you can qualify for Medicaid without going broke.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
-          <Button variant="outline" className="flex items-center gap-2">
+        <div className="flex flex-wrap gap-2 mt-4 md:mt-0 no-print">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={handlePrint}
+          >
             <Printer className="h-4 w-4" />
             <span className="hidden sm:inline">Print</span>
           </Button>
@@ -355,7 +952,9 @@ const ResultsDashboard = () => {
                 <TableCell>{formatCurrency(keyMetrics.assetsAtRisk)}</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
                 <TableCell className="text-right text-red-600 font-medium">
-                  {formatCurrency(keyMetrics.assetSpendDownRequired)} spend-down required
+                  {keyMetrics.assetSpendDownRequired > 0 
+                    ? `${formatCurrency(keyMetrics.assetSpendDownRequired)} spend-down required`
+                    : 'Already eligible'}
                 </TableCell>
               </TableRow>
               <TableRow>
@@ -369,7 +968,7 @@ const ResultsDashboard = () => {
               <TableRow className="bg-red-100/50">
                 <TableCell className="font-bold">Time Until Assets Depleted</TableCell>
                 <TableCell colSpan={2}>
-                  Paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month for long-term care
+                  Paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month in total expenses
                 </TableCell>
                 <TableCell className="text-right text-red-600 font-bold">
                   {keyMetrics.monthsUntilDepleted} months ({Math.floor(keyMetrics.monthsUntilDepleted/12)} years, {keyMetrics.monthsUntilDepleted % 12} months)
@@ -499,7 +1098,7 @@ const ResultsDashboard = () => {
                         dataKey="value"
                         label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       >
-                        {assetData.map((entry, index) => (
+                        {assetData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -555,7 +1154,9 @@ const ResultsDashboard = () => {
                   </p>
                   
                   <p className="text-gray-700">
-                    At your current level of assets ({formatCurrency(keyMetrics.assetsAtRisk)}), paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month for long-term care would deplete your savings in approximately <span className="font-semibold text-red-600">{keyMetrics.monthsUntilDepleted} months</span>, leaving you financially vulnerable.
+                    At your current level of assets ({formatCurrency(keyMetrics.assetsAtRisk)}), paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month in total expenses {expenses?.medicalTotal && expenses.medicalTotal > 0 ? 
+                      `(including ${formatCurrency(expenses.medicalTotal)} for medical/nursing home care)` : 
+                      ''} would deplete your savings in approximately <span className="font-semibold text-red-600">{keyMetrics.monthsUntilDepleted} months</span>, leaving you financially vulnerable.
                   </p>
                   
                   <div className="p-4 bg-green-50 rounded-md border border-green-200 my-6">
@@ -567,13 +1168,6 @@ const ResultsDashboard = () => {
                       This means you can secure quality long-term care through Medicaid while preserving <span className="font-semibold text-green-600">{protectionPercentage}%</span> of your assets for your financial security and legacy.
                     </p>
                   </div>
-                  
-                  <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
-                    <p className="text-shield-navy font-medium">Important Timeline Consideration:</p>
-                    <p className="text-gray-700 mt-1">
-                      For maximum protection, these strategies should be implemented at least 5 years before applying for Medicaid due to the look-back period. Please consult with our advisors to create a detailed implementation timeline.
-                    </p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -582,7 +1176,7 @@ const ResultsDashboard = () => {
           {/* Strategies Tab Content */}
           <TabsContent value="strategies" className="mt-6">
             <div className="space-y-6">
-              {strategies.map((strategy) => (
+              {strategies.map((strategy: any) => (
                 <Card key={strategy.id}>
                   <CardHeader>
                     <CardTitle>{strategy.name}</CardTitle>
@@ -593,7 +1187,7 @@ const ResultsDashboard = () => {
                       <div>
                         <h4 className="font-medium text-shield-navy mb-2">Benefits</h4>
                         <ul className="list-disc pl-5 space-y-1">
-                          {strategy.pros.map((pro, index) => (
+                          {strategy.pros.map((pro: string, index: number) => (
                             <li key={index} className="text-gray-700">{pro}</li>
                           ))}
                         </ul>
@@ -601,7 +1195,7 @@ const ResultsDashboard = () => {
                       <div>
                         <h4 className="font-medium text-shield-navy mb-2">Limitations</h4>
                         <ul className="list-disc pl-5 space-y-1">
-                          {strategy.cons.map((con, index) => (
+                          {strategy.cons.map((con: string, index: number) => (
                             <li key={index} className="text-gray-700">{con}</li>
                           ))}
                         </ul>
@@ -752,6 +1346,7 @@ const ResultsDashboard = () => {
         </Tabs>
       </div>
     </div>
+    </>
   );
 };
 

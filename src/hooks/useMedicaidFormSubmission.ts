@@ -66,7 +66,8 @@ export const useMedicaidFormSubmission = () => {
     setMedicalInfo,
     setLivingInfo,
     setState,
-    assessEligibility 
+    assessEligibility,
+    generateComprehensivePlan
   } = usePlanningContext();
   
   const [activeSection, setActiveSection] = useState<string>("client-info");
@@ -124,7 +125,7 @@ export const useMedicaidFormSubmission = () => {
         name: formData.applicantName || '',
         age: age,
         maritalStatus: formData.maritalStatus || 'single',
-        healthStatus: formData.medicalStatus || 'stable',
+        healthStatus: formData.medicalStatus || 'good',  // Backend expects: good, fair, declining, critical
         email: formData.email || '',
         phone: formData.cellPhone || formData.homePhone || '',
         state: formData.state || '',
@@ -160,7 +161,12 @@ export const useMedicaidFormSubmission = () => {
         investment: parseFloat(formData.investmentIncome || '0')
       };
       
-      // Calculate expenses
+      // Calculate expenses - use the medical subtotal for total medical costs
+      const medicalTotal = parseFloat(formData.medicalExpenseTotal || '0') || 
+                          (parseFloat(formData.medicalNonReimbursed || '0') + 
+                           parseFloat(formData.healthInsurancePremiums || '0') + 
+                           parseFloat(formData.extraordinaryMedical || '0'));
+      
       const expenses = {
         housing: parseFloat(formData.rentMortgage || '0'),
         utilities: parseFloat(formData.utilities || '0'),
@@ -168,7 +174,8 @@ export const useMedicaidFormSubmission = () => {
         medical: parseFloat(formData.medicalNonReimbursed || '0'),
         healthInsurance: parseFloat(formData.healthInsurancePremiums || '0'),  // Changed from health_insurance
         transportation: parseFloat(formData.transportation || '0'),
-        clothing: parseFloat(formData.clothing || '0')
+        clothing: parseFloat(formData.clothing || '0'),
+        medicalTotal: medicalTotal  // Add the total medical expenses
       };
       
       console.log("📊 Prepared data for submission:", {
@@ -270,6 +277,69 @@ export const useMedicaidFormSubmission = () => {
           variant: "destructive",
         });
         return;
+      }
+      
+      // Now run comprehensive planning to get strategies
+      console.log("🚀 Running comprehensive planning...");
+      console.log("📊 Data available for planning:", {
+        clientInfo,
+        hasName: !!clientInfo?.name,
+        hasAge: !!clientInfo?.age,
+        hasMaritalStatus: !!clientInfo?.maritalStatus,
+        assets,
+        income,
+        expenses,
+        state: formData.state
+      });
+      
+      // Ensure we have all required fields for comprehensive planning API
+      const planningData = {
+        clientInfo: {
+          name: clientInfo?.name || formData.applicantName || '',
+          age: Number(clientInfo?.age || (birthDate ? calculateAge(birthDate) : 0)),
+          maritalStatus: clientInfo?.maritalStatus || formData.maritalStatus || 'single',
+          healthStatus: clientInfo?.healthStatus || formData.medicalStatus || 'good',  // Backend expects: good, fair, declining, critical
+          isCrisis: clientInfo?.isCrisis || false
+        },
+        assets: assets && Object.keys(assets).length > 0 ? assets : { countable: 0 },
+        income: income && Object.keys(income).length > 0 ? income : { socialSecurity: 0 },
+        expenses: expenses || {},
+        medicalInfo: formData.primaryDiagnosis || formData.facilityName ? {
+          diagnosis: formData.primaryDiagnosis || '',
+          facility: formData.facilityName || '',
+          facilityEntryDate: formData.facilityEntryDate,
+          status: formData.medicalStatus || 'stable',
+          recentHospitalization: formData.recentHospitalStay || false,
+          hospitalizationDuration: formData.hospitalStayDuration || 0,
+          longTermCareInsurance: formData.longTermCareInsurance || false,
+          insuranceDetails: formData.insuranceDetails || ''
+        } : {},
+        livingInfo: formData.address || formData.emergencyContactName ? {
+          homeAddress: `${formData.address || ''}, ${formData.city || ''}, ${formData.state || ''} ${formData.zipCode || ''}`.trim(),
+          willReturnHome: formData.intentToReturnHome || false,
+          emergencyContact: {
+            name: formData.emergencyContactName || '',
+            phone: formData.emergencyContactPhone || ''
+          }
+        } : {},
+        state: formData.state || ''
+      };
+      
+      console.log("📤 Final planning data structure:", JSON.stringify(planningData, null, 2));
+      
+      let planningResult: any = null;
+      try {
+        planningResult = await generateComprehensivePlan(planningData);
+        console.log("✅ Comprehensive planning completed");
+        console.log("📊 Planning result:", planningResult);
+      } catch (planningError) {
+        console.error("❌ Error during comprehensive planning:", planningError);
+        // Don't fail the entire process if planning fails, but log it
+        toast({
+          title: "Planning Warning",
+          description: "Eligibility assessment completed, but some planning features may be limited.",
+          variant: "default",
+        });
       }
       
       console.log("📍 Navigating to results page...");

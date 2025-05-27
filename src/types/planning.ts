@@ -42,6 +42,15 @@ export interface PlanningContextProps extends PlanningState {
     livingInfo?: LivingInfo,
     state?: string
   }) => Promise<any | null>;
+  generateComprehensivePlan: (overrideData?: {
+    clientInfo?: ClientInfo,
+    assets?: Assets,
+    income?: Income,
+    expenses?: Expenses,
+    medicalInfo?: MedicalInfo,
+    livingInfo?: LivingInfo,
+    state?: string
+  }) => Promise<any | null>;
   generatePlan: (planType: string, overrideData?: {
     clientInfo?: ClientInfo,
     assets?: Assets,

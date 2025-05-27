@@ -86,12 +86,16 @@ const MedicalDataSection: React.FC<MedicalDataSectionProps> = ({
         {/* Medical Status */}
         <div className="space-y-2">
           <Label htmlFor="medicalStatus">Current Medical Status</Label>
-          <Select onValueChange={(value) => handleSelectChange("medicalStatus", value)}>
+          <Select 
+            value={formData.medicalStatus} 
+            onValueChange={(value) => handleSelectChange("medicalStatus", value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="well">Well</SelectItem>
+              <SelectItem value="good">Good</SelectItem>
+              <SelectItem value="fair">Fair</SelectItem>
               <SelectItem value="declining">Declining</SelectItem>
               <SelectItem value="critical">Critical</SelectItem>
             </SelectContent>

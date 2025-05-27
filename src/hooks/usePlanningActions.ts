@@ -145,12 +145,21 @@ export const usePlanningActions = (
     const effectiveLivingInfo = overrideData?.livingInfo || livingInfo;
     const effectiveState = overrideData?.state || clientInfo?.state || state;
     
-    if (!effectiveClientInfo || !effectiveAssets || !effectiveIncome) {
+    if (!effectiveClientInfo || !effectiveAssets || !effectiveIncome || 
+        !effectiveClientInfo.name || !effectiveClientInfo.age || !effectiveClientInfo.maritalStatus) {
       console.error("Missing required data for plan generation:", { 
         clientInfo: effectiveClientInfo, 
         assets: effectiveAssets, 
         income: effectiveIncome, 
-        state: effectiveState 
+        state: effectiveState,
+        missingFields: {
+          hasClientInfo: !!effectiveClientInfo,
+          hasName: !!effectiveClientInfo?.name,
+          hasAge: !!effectiveClientInfo?.age,
+          hasMaritalStatus: !!effectiveClientInfo?.maritalStatus,
+          hasAssets: !!effectiveAssets,
+          hasIncome: !!effectiveIncome
+        }
       });
       toast({
         variant: "destructive",
@@ -162,25 +171,38 @@ export const usePlanningActions = (
 
     setLoading(true);
     try {
-      // Restructured payload to match backend expectations
-      const payload = {
-        clientInfo: {
-          name: effectiveClientInfo.name,
-          age: Number(effectiveClientInfo.age),
-          maritalStatus: effectiveClientInfo.maritalStatus,
-          healthStatus: effectiveClientInfo.healthStatus || undefined,
-          isCrisis: effectiveClientInfo.isCrisis || false,
-          state: effectiveState,
-        },
-        assets: effectiveAssets,
-        income: effectiveIncome,
-        expenses: effectiveExpenses || undefined,
-        medicalInfo: effectiveMedicalInfo || undefined,
-        livingInfo: effectiveLivingInfo || undefined,
+      // Ensure clientInfo is properly structured with required fields
+      const clientInfoPayload = {
+        name: effectiveClientInfo?.name || '',
+        age: Number(effectiveClientInfo?.age || 0),
+        maritalStatus: effectiveClientInfo?.maritalStatus || 'single',
+        healthStatus: effectiveClientInfo?.healthStatus,
+        isCrisis: effectiveClientInfo?.isCrisis || false,
         state: effectiveState,
       };
       
-      console.log("Sending planning request with data:", payload);
+      // Validate required fields before sending
+      if (!clientInfoPayload.name || !clientInfoPayload.age || !clientInfoPayload.maritalStatus) {
+        throw new Error(`Missing required clientInfo fields: name=${clientInfoPayload.name}, age=${clientInfoPayload.age}, maritalStatus=${clientInfoPayload.maritalStatus}`);
+      }
+      
+      // Restructured payload to match backend expectations
+      const payload = {
+        clientInfo: clientInfoPayload,
+        assets: effectiveAssets || {},
+        income: effectiveIncome || {},
+        expenses: effectiveExpenses || {},
+        medicalInfo: effectiveMedicalInfo || {},
+        livingInfo: effectiveLivingInfo || {},
+        state: effectiveState,
+      };
+      
+      console.log("🔍 Planning request details:");
+      console.log("📦 effectiveClientInfo:", effectiveClientInfo);
+      console.log("📦 effectiveAssets:", effectiveAssets);
+      console.log("📦 effectiveIncome:", effectiveIncome);
+      console.log("📦 effectiveState:", effectiveState);
+      console.log("📦 Final payload:", JSON.stringify(payload, null, 2));
       
       const response = await api.planning.comprehensivePlanning(payload);
       
@@ -190,13 +212,15 @@ export const usePlanningActions = (
         throw new Error(response.message || `Failed to generate ${planType} plan`);
       }
 
-      setPlanningResults(response.data);
+      // Handle both response.data and direct response format
+      const planningData = response.data || response;
+      setPlanningResults(planningData);
       toast({
         title: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan Generated`,
         description: `Your ${planType} plan has been successfully generated.`,
       });
       
-      return response.data;
+      return planningData;
       
     } catch (error: any) {
       console.error(`${planType} Planning Error:`, error);
@@ -227,6 +251,19 @@ export const usePlanningActions = (
       navigate('/results');
     }
     return result;
+  };
+
+  const generateComprehensivePlan = async (overrideData?: {
+    clientInfo?: ClientInfo,
+    assets?: Assets,
+    income?: Income,
+    expenses?: Expenses,
+    medicalInfo?: MedicalInfo,
+    livingInfo?: LivingInfo,
+    state?: string
+  }) => {
+    // Same as runComprehensivePlanning but without auto-navigation
+    return await generatePlan('comprehensive', overrideData);
   };
 
   const generateReport = async (reportType: string = 'detailed', format: string = 'pdf'): Promise<void> => {
@@ -279,6 +316,7 @@ export const usePlanningActions = (
     assessEligibility,
     generatePlan,
     runComprehensivePlanning,
+    generateComprehensivePlan,
     generateReport
   };
 };
