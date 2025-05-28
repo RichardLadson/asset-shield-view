@@ -53,7 +53,9 @@ const MedicaidIntakeForm = () => {
     activeSection,
     setActiveSection,
     handleSubmit,
-    progressTracking
+    progressTracking,
+    isProcessing,
+    setIsProcessing
   } = useMedicaidFormSubmission();
   
   // Auto-save form data
@@ -135,11 +137,28 @@ const MedicaidIntakeForm = () => {
       
       {/* Progress Modal */}
       <ProgressModal
-        open={loading}
+        open={isProcessing}
         steps={progressTracking.steps}
         progress={progressTracking.progress}
         message={progressTracking.message}
+        onComplete={() => {
+          if (import.meta.env.DEV) {
+            console.log("🎯 View Results button clicked!");
+          }
+          setIsProcessing(false);
+          navigate('/results');
+        }}
       />
+      
+      {/* Debug info */}
+      {import.meta.env.DEV && (
+        <div className="fixed top-4 right-4 bg-black text-white p-2 text-xs">
+          Context Loading: {loading.toString()}<br/>
+          Is Processing: {isProcessing.toString()}<br/>
+          Progress: {progressTracking.progress}%<br/>
+          Message: {progressTracking.message}
+        </div>
+      )}
       
       {/* Draft Recovery Banner */}
       {showDraftBanner && (

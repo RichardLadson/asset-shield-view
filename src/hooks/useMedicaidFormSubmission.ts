@@ -74,6 +74,7 @@ export const useMedicaidFormSubmission = () => {
   } = usePlanningContext();
   
   const [activeSection, setActiveSection] = useState<string>("client-info");
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   
   const progressSteps = [
     { id: 'validate', label: 'Validating form data' },
@@ -105,16 +106,17 @@ export const useMedicaidFormSubmission = () => {
     }
 
     try {
-      // Set loading to true to show progress modal
+      // Set both loading states to show progress modal
       setLoading(true);
+      setIsProcessing(true);
       
       // Start progress tracking - Step 1: Validating (starts as active)
       progressTracking.reset();
       
       if (import.meta.env.DEV) {
         console.log("🔄 Step 1: Validating form data (active)");
-        // Add delay to see the validation step spinning
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Add delay to show progress
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
       
       // Calculate age from birth date
@@ -130,8 +132,8 @@ export const useMedicaidFormSubmission = () => {
       if (import.meta.env.DEV) {
         console.log("✅ Step 1: Validating (completed)");
         console.log("🔄 Step 2: Preparing application (active)");
-        // Add delay to see the preparation step spinning
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Add delay to show progress
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
       
       // Prepare client info
@@ -264,8 +266,8 @@ export const useMedicaidFormSubmission = () => {
       if (import.meta.env.DEV) {
         console.log("✅ Step 2: Preparing (completed)");
         console.log("🔄 Step 3: Assessing eligibility (active)");
-        // Add delay to see the assessment step spinning
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Add delay to show progress
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
       
       // Call assessEligibility with the prepared data directly
@@ -301,8 +303,8 @@ export const useMedicaidFormSubmission = () => {
       if (import.meta.env.DEV) {
         console.log("✅ Step 3: Assessing (completed)");
         console.log("🔄 Step 4: Generating comprehensive plan (active)");
-        // Add delay to see the generation step spinning
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Add delay to show progress
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
       
       // Now run comprehensive planning to get strategies
@@ -371,8 +373,8 @@ export const useMedicaidFormSubmission = () => {
       if (import.meta.env.DEV) {
         console.log("✅ Step 4: Generating (completed)");
         console.log("🔄 Step 5: Finalizing results (active)");
-        // Add delay to see the finalization step spinning
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Add delay to show progress
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
       
       if (import.meta.env.DEV) {
@@ -389,28 +391,16 @@ export const useMedicaidFormSubmission = () => {
       
       // Complete the final step
       progressTracking.nextStep();
+      
       if (import.meta.env.DEV) {
         console.log("✅ Step 5: Finalizing (completed)");
         console.log("✅ All steps completed!");
-        // Add delay to see all steps complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // Show success toast in dev mode after all steps complete
-        toast({
-          title: "Success!",
-          description: "Your Medicaid planning form has been submitted successfully.",
-        });
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log("⏳ Waiting for user to click 'View Results'...");
       }
       
-      // Navigate to results
-      navigate('/results');
-      if (import.meta.env.DEV) {
-        console.log("✅ Navigation successful");
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      // Set loading to false after navigation
-      setLoading(false);
+      // IMPORTANT: Don't navigate automatically or set loading to false
+      // The ProgressModal's "View Results" button will handle navigation
+      // and the loading state will be cleared when the component unmounts
       
     } catch (error) {
       console.error("❌ Error during form submission:", error);
@@ -422,6 +412,7 @@ export const useMedicaidFormSubmission = () => {
       });
       // Set loading to false on error
       setLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -429,6 +420,8 @@ export const useMedicaidFormSubmission = () => {
     activeSection,
     setActiveSection,
     handleSubmit,
-    progressTracking
+    progressTracking,
+    isProcessing,
+    setIsProcessing
   };
 };

@@ -39,24 +39,29 @@ export const useProgressTracking = (initialSteps: Omit<ProgressStep, 'status'>[]
 
   const nextStep = useCallback(() => {
     setState(prev => {
-      if (prev.currentStep >= prev.steps.length - 1) return prev;
-      
       const steps = [...prev.steps];
-      steps[prev.currentStep].status = 'completed';
+      const isLastStep = prev.currentStep >= prev.steps.length - 1;
       
+      // Mark current step as completed
+      if (prev.currentStep < steps.length) {
+        steps[prev.currentStep].status = 'completed';
+      }
+      
+      // If not the last step, activate the next one
       const nextIndex = prev.currentStep + 1;
-      if (nextIndex < steps.length) {
+      if (!isLastStep && nextIndex < steps.length) {
         steps[nextIndex].status = 'active';
       }
       
       const completedSteps = steps.filter(s => s.status === 'completed').length;
       const progress = (completedSteps / steps.length) * 100;
       
+      // For the last step, keep the current message and index
       return {
         steps,
-        currentStep: nextIndex,
+        currentStep: isLastStep ? prev.currentStep : nextIndex,
         progress,
-        message: steps[nextIndex]?.label || ''
+        message: isLastStep ? prev.message : (steps[nextIndex]?.label || '')
       };
     });
   }, []);
