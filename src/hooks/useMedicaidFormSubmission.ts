@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
@@ -107,34 +108,30 @@ export const useMedicaidFormSubmission = () => {
       // Set loading to true to show progress modal
       setLoading(true);
       
-      // Start progress tracking
+      // Start progress tracking - Step 1: Validating (starts as active)
       progressTracking.reset();
       
-      // Add initial delay to see the modal appear with first step active
       if (import.meta.env.DEV) {
-        console.log("🔄 Step 0: Validating (active)");
-        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 seconds to see "Validating"
+        console.log("🔄 Step 1: Validating form data (active)");
+        // Add delay to see the validation step spinning
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
       
       // Calculate age from birth date
       const birthDate = formData.applicantBirthDate || formData.dateOfBirth;
       const age = birthDate ? calculateAge(birthDate) : 0;
       
-      // Development-only minimal logging
       if (import.meta.env.DEV) {
         console.log("📋 Form submission started for:", formData.applicantName);
       }
       
-      // Move from validate to prepare step
+      // Complete validation step and move to preparation
       progressTracking.nextStep();
       if (import.meta.env.DEV) {
-        console.log("✅ Step 0: Validating (completed)");
-        console.log("🔄 Step 1: Preparing (active)");
-      }
-      
-      // Add delay in development to see progress modal
-      if (import.meta.env.DEV) {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 seconds
+        console.log("✅ Step 1: Validating (completed)");
+        console.log("🔄 Step 2: Preparing application (active)");
+        // Add delay to see the preparation step spinning
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
       
       // Prepare client info
@@ -142,7 +139,7 @@ export const useMedicaidFormSubmission = () => {
         name: formData.applicantName || '',
         age: age,
         maritalStatus: formData.maritalStatus || 'single',
-        healthStatus: formData.medicalStatus || 'good',  // Backend expects: good, fair, declining, critical
+        healthStatus: formData.medicalStatus || 'good',
         email: formData.email || '',
         phone: formData.cellPhone || formData.homePhone || '',
         state: formData.state || '',
@@ -166,19 +163,19 @@ export const useMedicaidFormSubmission = () => {
 
       const assets = {
         countable: countableAssets,
-        nonCountable: nonCountableAssets  // Changed from non_countable to nonCountable
+        nonCountable: nonCountableAssets
       };
       
       // Calculate income
       const income = {
-        socialSecurity: parseFloat(formData.applicantSocialSecurity || '0') + parseFloat(formData.spouseSocialSecurity || '0'),  // Changed from social_security
+        socialSecurity: parseFloat(formData.applicantSocialSecurity || '0') + parseFloat(formData.spouseSocialSecurity || '0'),
         pension: parseFloat(formData.applicantPension || '0') + parseFloat(formData.spousePension || '0'),
         annuity: parseFloat(formData.annuityIncome || '0'),
         rental: parseFloat(formData.rentalIncome || '0'),
         investment: parseFloat(formData.investmentIncome || '0')
       };
       
-      // Calculate expenses - use the medical subtotal for total medical costs
+      // Calculate expenses
       const medicalTotal = parseFloat(formData.medicalExpenseTotal || '0') || 
                           (parseFloat(formData.medicalNonReimbursed || '0') + 
                            parseFloat(formData.healthInsurancePremiums || '0') + 
@@ -189,10 +186,10 @@ export const useMedicaidFormSubmission = () => {
         utilities: parseFloat(formData.utilities || '0'),
         food: parseFloat(formData.food || '0'),
         medical: parseFloat(formData.medicalNonReimbursed || '0'),
-        healthInsurance: parseFloat(formData.healthInsurancePremiums || '0'),  // Changed from health_insurance
+        healthInsurance: parseFloat(formData.healthInsurancePremiums || '0'),
         transportation: parseFloat(formData.transportation || '0'),
         clothing: parseFloat(formData.clothing || '0'),
-        medicalTotal: medicalTotal  // Add the total medical expenses
+        medicalTotal: medicalTotal
       };
       
       if (import.meta.env.DEV) {
@@ -262,22 +259,16 @@ export const useMedicaidFormSubmission = () => {
         setLivingInfo(livingInfo);
       }
       
-      // Wait a moment for state updates to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Add delay in development to see progress modal
-      if (import.meta.env.DEV) {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 seconds
-      }
-      
-      // Move to assess step AFTER the delay
+      // Complete preparation step and move to assessment
       progressTracking.nextStep();
       if (import.meta.env.DEV) {
-        console.log("✅ Step 1: Preparing (completed)");
-        console.log("🔄 Step 2: Assessing (active)");
+        console.log("✅ Step 2: Preparing (completed)");
+        console.log("🔄 Step 3: Assessing eligibility (active)");
+        // Add delay to see the assessment step spinning
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
       
-      // Call assessEligibility with the prepared data directly to avoid async state issues
+      // Call assessEligibility with the prepared data directly
       if (import.meta.env.DEV) {
         console.log("🚀 Calling assessEligibility...");
       }
@@ -286,10 +277,6 @@ export const useMedicaidFormSubmission = () => {
       try {
         eligibilityResult = await assessEligibility(apiData);
         
-        // Add delay after API call to see the step complete
-        if (import.meta.env.DEV) {
-          await new Promise(resolve => setTimeout(resolve, 500)); // 0.5 seconds
-        }
         if (import.meta.env.DEV) {
           console.log("✅ Assessment completed");
         }
@@ -309,16 +296,13 @@ export const useMedicaidFormSubmission = () => {
         return;
       }
       
-      // Add delay in development to see progress modal
-      if (import.meta.env.DEV) {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 seconds
-      }
-      
-      // Move to generate step AFTER the delay
+      // Complete assessment step and move to generation
       progressTracking.nextStep();
       if (import.meta.env.DEV) {
-        console.log("✅ Step 2: Assessing (completed)");
-        console.log("🔄 Step 3: Generating (active)");
+        console.log("✅ Step 3: Assessing (completed)");
+        console.log("🔄 Step 4: Generating comprehensive plan (active)");
+        // Add delay to see the generation step spinning
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
       
       // Now run comprehensive planning to get strategies
@@ -332,7 +316,7 @@ export const useMedicaidFormSubmission = () => {
           name: clientInfo?.name || formData.applicantName || '',
           age: Number(clientInfo?.age || (birthDate ? calculateAge(birthDate) : 0)),
           maritalStatus: clientInfo?.maritalStatus || formData.maritalStatus || 'single',
-          healthStatus: clientInfo?.healthStatus || formData.medicalStatus || 'good',  // Backend expects: good, fair, declining, critical
+          healthStatus: clientInfo?.healthStatus || formData.medicalStatus || 'good',
           isCrisis: clientInfo?.isCrisis || false
         },
         assets: assets && Object.keys(assets).length > 0 ? assets : { countable: 0 },
@@ -367,9 +351,7 @@ export const useMedicaidFormSubmission = () => {
       try {
         planningResult = await generateComprehensivePlan(planningData);
         
-        // Add delay after API call to see the step complete
         if (import.meta.env.DEV) {
-          await new Promise(resolve => setTimeout(resolve, 500)); // 0.5 seconds
           console.log("✅ Comprehensive planning completed");
         }
       } catch (planningError) {
@@ -384,20 +366,17 @@ export const useMedicaidFormSubmission = () => {
         }
       }
       
-      // Add delay in development to see final step
-      if (import.meta.env.DEV) {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 seconds
-      }
-      
-      // Move to complete step AFTER the delay
+      // Complete generation step and move to finalization
       progressTracking.nextStep();
       if (import.meta.env.DEV) {
-        console.log("✅ Step 3: Generating (completed)");
-        console.log("🔄 Step 4: Finalizing (active)");
+        console.log("✅ Step 4: Generating (completed)");
+        console.log("🔄 Step 5: Finalizing results (active)");
+        // Add delay to see the finalization step spinning
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
       
       if (import.meta.env.DEV) {
-        console.log("📍 Navigating to results page...");
+        console.log("📍 Preparing to navigate to results page...");
       }
       
       // Only show success toast in production
@@ -408,47 +387,30 @@ export const useMedicaidFormSubmission = () => {
         });
       }
       
-      // Add a small delay to ensure the toast is shown
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      // Complete the final step
+      progressTracking.nextStep();
       if (import.meta.env.DEV) {
-        console.log("🚀 Navigating...");
+        console.log("✅ Step 5: Finalizing (completed)");
+        console.log("✅ All steps completed!");
+        // Add delay to see all steps complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Show success toast in dev mode after all steps complete
+        toast({
+          title: "Success!",
+          description: "Your Medicaid planning form has been submitted successfully.",
+        });
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
-      try {
-        // Mark the final step as complete
-        progressTracking.nextStep();
-        if (import.meta.env.DEV) {
-          console.log("✅ Step 4: Finalizing (completed)");
-          console.log("✅ All steps completed!");
-        }
-        
-        // Add delay before navigation to see all steps complete
-        if (import.meta.env.DEV) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second to see final checkmark
-          // Show success toast in dev mode after all steps complete
-          toast({
-            title: "Success!",
-            description: "Your Medicaid planning form has been submitted successfully.",
-          });
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Let user see the toast
-        }
-        
-        navigate('/results');
-        if (import.meta.env.DEV) {
-          console.log("✅ Navigation successful");
-        }
-        
-        // Add small delay before hiding modal
-        if (import.meta.env.DEV) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      } catch (navError) {
-        console.error("❌ Navigation error:", navError);
-      } finally {
-        // Always set loading to false after navigation
-        setLoading(false);
+      // Navigate to results
+      navigate('/results');
+      if (import.meta.env.DEV) {
+        console.log("✅ Navigation successful");
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
+      
+      // Set loading to false after navigation
+      setLoading(false);
       
     } catch (error) {
       console.error("❌ Error during form submission:", error);
