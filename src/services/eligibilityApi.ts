@@ -3,8 +3,8 @@ import axios from 'axios';
 import apiClient, { ApiResponse } from './apiClient';
 import { Assets, Income, ClientInfo } from './types';
 
-// Debug flag - set to true for detailed logging
-const DEBUG = true;
+// Debug flag - only enabled in development
+const DEBUG = import.meta.env.DEV;
 
 // Helper function to safely stringify objects for logging
 const safeStringify = (obj: any) => {

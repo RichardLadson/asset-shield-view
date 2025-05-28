@@ -13,7 +13,15 @@ import { PlanningProvider } from "./context/PlanningContext";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Debug environment detection
+  if (import.meta.env.DEV) {
+    console.log("🚀 App running in DEVELOPMENT mode");
+  } else {
+    console.log("🚀 App running in PRODUCTION mode");
+  }
+  
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -32,6 +40,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

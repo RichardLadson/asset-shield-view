@@ -32,13 +32,15 @@ export const usePlanningActions = (
     const effectiveIncome = overrideData?.income || income;
     const effectiveState = overrideData?.state || clientInfo?.state || state;
     
-    console.log("🔍 assessEligibility called with:", {
-      hasOverrideData: !!overrideData,
-      effectiveClientInfo,
-      effectiveAssets,
-      effectiveIncome,
-      effectiveState
-    });
+    if (import.meta.env.DEV) {
+      console.log("🔍 assessEligibility called with:", {
+        hasOverrideData: !!overrideData,
+        effectiveClientInfo,
+        effectiveAssets,
+        effectiveIncome,
+        effectiveState
+      });
+    }
     
     if (!effectiveClientInfo || !effectiveAssets || !effectiveIncome || 
         !effectiveClientInfo.name || !effectiveClientInfo.age || !effectiveClientInfo.maritalStatus) {
@@ -77,12 +79,16 @@ export const usePlanningActions = (
         income: effectiveIncome,
       };
       
-      console.log("Sending eligibility assessment payload:", JSON.stringify(payload, null, 2));
+      if (import.meta.env.DEV) {
+        console.log("Sending eligibility assessment payload:", JSON.stringify(payload, null, 2));
+      }
 
       const response = await api.eligibility.assessEligibility(payload);
-      console.log("Received eligibility response:", response);
-      console.log("Response status:", response?.status);
-      console.log("Response has data property:", 'data' in (response || {}));
+      if (import.meta.env.DEV) {
+        console.log("Received eligibility response:", response);
+        console.log("Response status:", response?.status);
+        console.log("Response has data property:", 'data' in (response || {}));
+      }
       
       if (!response || (response.status && response.status === 'error')) {
         throw new Error(response?.message || "Failed to assess eligibility");
@@ -93,19 +99,23 @@ export const usePlanningActions = (
       if (response && (response.isResourceEligible !== undefined || response.isIncomeEligible !== undefined)) {
         // The response IS the data
         setEligibilityResults(response);
-        toast({
-          title: "Eligibility Assessed",
-          description: "Your eligibility has been successfully assessed.",
-        });
+        if (!import.meta.env.DEV) {
+          toast({
+            title: "Eligibility Assessed",
+            description: "Your eligibility has been successfully assessed.",
+          });
+        }
         
         return response;
       } else if (response && response.data) {
         // In case the backend changes to wrap it in data
         setEligibilityResults(response.data);
-        toast({
-          title: "Eligibility Assessed", 
-          description: "Your eligibility has been successfully assessed.",
-        });
+        if (!import.meta.env.DEV) {
+          toast({
+            title: "Eligibility Assessed", 
+            description: "Your eligibility has been successfully assessed.",
+          });
+        }
         
         return response.data;
       } else {
@@ -197,16 +207,20 @@ export const usePlanningActions = (
         state: effectiveState,
       };
       
-      console.log("🔍 Planning request details:");
-      console.log("📦 effectiveClientInfo:", effectiveClientInfo);
-      console.log("📦 effectiveAssets:", effectiveAssets);
-      console.log("📦 effectiveIncome:", effectiveIncome);
-      console.log("📦 effectiveState:", effectiveState);
-      console.log("📦 Final payload:", JSON.stringify(payload, null, 2));
+      if (import.meta.env.DEV) {
+        console.log("🔍 Planning request details:");
+        console.log("📦 effectiveClientInfo:", effectiveClientInfo);
+        console.log("📦 effectiveAssets:", effectiveAssets);
+        console.log("📦 effectiveIncome:", effectiveIncome);
+        console.log("📦 effectiveState:", effectiveState);
+        console.log("📦 Final payload:", JSON.stringify(payload, null, 2));
+      }
       
       const response = await api.planning.comprehensivePlanning(payload);
       
-      console.log("Received planning response:", response);
+      if (import.meta.env.DEV) {
+        console.log("Received planning response:", response);
+      }
       
       if (response.status === 'error') {
         throw new Error(response.message || `Failed to generate ${planType} plan`);
@@ -215,10 +229,12 @@ export const usePlanningActions = (
       // Handle both response.data and direct response format
       const planningData = response.data || response;
       setPlanningResults(planningData);
-      toast({
-        title: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan Generated`,
-        description: `Your ${planType} plan has been successfully generated.`,
-      });
+      if (!import.meta.env.DEV) {
+        toast({
+          title: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan Generated`,
+          description: `Your ${planType} plan has been successfully generated.`,
+        });
+      }
       
       return planningData;
       
@@ -273,13 +289,15 @@ export const usePlanningActions = (
         throw new Error("Missing client information or planning results required for report generation");
       }
 
-      console.log("Sending report generation request with data:", {
-        clientInfo,
-        planningResults,
-        reportType,
-        outputFormat: format,
-        state: clientInfo?.state || state
-      });
+      if (import.meta.env.DEV) {
+        console.log("Sending report generation request with data:", {
+          clientInfo,
+          planningResults,
+          reportType,
+          outputFormat: format,
+          state: clientInfo?.state || state
+        });
+      }
 
       const response = await api.report.generateReport({
         clientInfo: clientInfo,

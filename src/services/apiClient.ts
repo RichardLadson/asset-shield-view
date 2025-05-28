@@ -3,9 +3,12 @@ import axios from 'axios';
 
 // Get the API URL from environment variable or use localhost
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const isDevelopment = import.meta.env.DEV;
 
-// Log the API URL being used (helpful for debugging)
-console.log(`🔌 API Client: Using API base URL: ${API_BASE_URL}`);
+// Only log in development
+if (isDevelopment) {
+  console.log(`🔌 API Client: Using API base URL: ${API_BASE_URL}`);
+}
 
 // Check if the API is reachable
 const checkApiConnection = async () => {
@@ -50,10 +53,15 @@ const apiClient = axios.create({
   timeout: 30000, // 30 seconds
 });
 
-// Add request interceptor for logging
+// Add request interceptor for logging and timing
 apiClient.interceptors.request.use(
   config => {
-    console.log(`🔌 API Client: Sending ${config.method?.toUpperCase()} request to ${config.baseURL}${config.url}`);
+    // Add timing to track API performance (store on config using any)
+    (config as any).requestStartTime = performance.now();
+    
+    if (isDevelopment) {
+      console.log(`🔌 API Client: Sending ${config.method?.toUpperCase()} request to ${config.baseURL}${config.url}`);
+    }
     return config;
   },
   error => {
@@ -62,10 +70,24 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Add response interceptor for error handling
+// Add response interceptor for error handling and performance logging
 apiClient.interceptors.response.use(
   response => {
-    console.log(`🔌 API Client: Received response with status ${response.status} from ${response.config.url}`);
+    // Calculate API call duration
+    const startTime = (response.config as any).requestStartTime;
+    const duration = startTime ? performance.now() - startTime : 0;
+    
+    // Performance logging
+    const emoji = duration < 200 ? '⚡' : duration < 1000 ? '🔄' : '🐌';
+    if (isDevelopment && duration > 0) {
+      console.log(`${emoji} API ${response.config.method?.toUpperCase()} ${response.config.url}: ${duration.toFixed(1)}ms (${response.status})`);
+    }
+    
+    // Warn about slow API calls even in production
+    if (duration > 2000) {
+      console.warn(`Slow API call: ${response.config.method?.toUpperCase()} ${response.config.url} took ${duration.toFixed(1)}ms`);
+    }
+    
     return response;
   },
   error => {

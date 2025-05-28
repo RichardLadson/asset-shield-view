@@ -38,11 +38,13 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { ResultsDashboardSkeleton } from "./ResultsDashboardSkeleton";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
 const ResultsDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
@@ -60,18 +62,23 @@ const ResultsDashboard = () => {
 
   // Check if we have results, if not redirect to form
   useEffect(() => {
-    console.log("🔍 ResultsDashboard mounted");
-    console.log("📊 eligibilityResults:", eligibilityResults);
-    console.log("📊 planningResults:", planningResults);
-    console.log("📊 assets:", assets);
-    console.log("📊 income:", income);
-    console.log("📊 clientInfo:", clientInfo);
-    console.log("⏳ loading:", loading);
+    if (import.meta.env.DEV) {
+      console.log("🔍 ResultsDashboard mounted");
+      console.log("📊 eligibilityResults:", eligibilityResults);
+      console.log("📊 planningResults:", planningResults);
+      console.log("📊 assets:", assets);
+      console.log("📊 income:", income);
+      console.log("📊 clientInfo:", clientInfo);
+      console.log("⏳ loading:", loading);
+    }
     
     // Add a small delay to allow context to update after navigation
     const checkTimer = setTimeout(() => {
+      setIsInitialLoad(false);
       if (!loading && !eligibilityResults && !planningResults) {
-        console.log("❌ No results available after delay, redirecting to form");
+        if (import.meta.env.DEV) {
+          console.log("❌ No results available after delay, redirecting to form");
+        }
         toast({
           title: "No Results Available",
           description: "Please complete the form to see your results.",
@@ -83,6 +90,11 @@ const ResultsDashboard = () => {
     
     return () => clearTimeout(checkTimer);
   }, [eligibilityResults, planningResults, loading, navigate]);
+
+  // Show skeleton while loading
+  if (loading || isInitialLoad) {
+    return <ResultsDashboardSkeleton />;
+  }
 
   // Get actual values from eligibility results and context
   const actualCountableAssets = eligibilityResults?.countableAssets || assets?.countable || 0;
@@ -99,15 +111,17 @@ const ResultsDashboard = () => {
                         actualIncomeLimit !== null && actualIncomeLimit !== undefined;
   
   // Debug logging
-  console.log("📊 Dashboard Data Debug:", {
-    eligibilityResults,
-    actualCountableAssets,
-    actualTotalIncome,
-    actualResourceLimit,
-    actualIncomeLimit,
-    assets,
-    income
-  });
+  if (import.meta.env.DEV) {
+    console.log("📊 Dashboard Data Debug:", {
+      eligibilityResults,
+      actualCountableAssets,
+      actualTotalIncome,
+      actualResourceLimit,
+      actualIncomeLimit,
+      assets,
+      income
+    });
+  }
   
   // Calculate total monthly expenses - this should include ALL expenses, not just medical
   const totalMonthlyExpenses = 
@@ -122,12 +136,14 @@ const ResultsDashboard = () => {
   // Use total monthly expenses for depletion calculation, with fallback to default nursing home cost
   const actualMonthlyBurnRate = totalMonthlyExpenses || planningResults?.monthlyCareCost || 9500;
   
-  console.log("📊 Monthly Expenses Debug:", {
-    expenses: expenses,
-    totalMonthlyExpenses: totalMonthlyExpenses,
-    defaultCost: 9500,
-    actualBurnRate: actualMonthlyBurnRate
-  });
+  if (import.meta.env.DEV) {
+    console.log("📊 Monthly Expenses Debug:", {
+      expenses: expenses,
+      totalMonthlyExpenses: totalMonthlyExpenses,
+      defaultCost: 9500,
+      actualBurnRate: actualMonthlyBurnRate
+    });
+  }
   
   // Prepare key metrics data based on the results from API
   const keyMetrics = hasValidLimits ? {
@@ -170,7 +186,9 @@ const ResultsDashboard = () => {
     urgency: "Unknown - Unable to determine state-specific limits",
   };
   
-  console.log("📊 Key Metrics Calculated:", keyMetrics);
+  if (import.meta.env.DEV) {
+    console.log("📊 Key Metrics Calculated:", keyMetrics);
+  }
   
   // Prepare asset data for charts - simplified for current data structure
   const assetData = [
@@ -192,13 +210,15 @@ const ResultsDashboard = () => {
   const protectionPercentage = totalAssets > 0 ? Math.round((totalProtected / totalAssets) * 100) : 0;
   
   // Debug the protection calculation
-  console.log("📊 Protection Calculation Debug:", {
-    totalAssets,
-    totalProtected,
-    protectableAssets: keyMetrics.protectableAssets,
-    nonCountableAssets: actualNonCountableAssets,
-    percentage: protectionPercentage
-  });
+  if (import.meta.env.DEV) {
+    console.log("📊 Protection Calculation Debug:", {
+      totalAssets,
+      totalProtected,
+      protectableAssets: keyMetrics.protectableAssets,
+      nonCountableAssets: actualNonCountableAssets,
+      percentage: protectionPercentage
+    });
+  }
 
   // Prepare data for eligibility charts
   const eligibilityData = [
@@ -424,7 +444,7 @@ const ResultsDashboard = () => {
   ${isDetailed ? `
   <div class="section">
     <h2>Recommended Strategies</h2>
-    ${strategies.map(strategy => `
+    ${strategies.map((strategy: any) => `
       <div class="metric">
         <h3>${strategy.name}</h3>
         <p>${strategy.description}</p>

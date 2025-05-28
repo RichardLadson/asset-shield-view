@@ -1,15 +1,17 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { 
   Accordion, 
   AccordionContent, 
   AccordionItem, 
   AccordionTrigger 
 } from "../ui/accordion";
-import { Button } from "../ui/button";
-import { Loader2 } from "lucide-react";
+import { LoadingButton } from "../ui/loading-button";
+import { ProgressModal } from "../ui/progress-modal";
 import { usePlanningContext } from "@/context/PlanningContext";
 import { useMedicaidFormData } from "@/hooks/useMedicaidFormData";
 import { useMedicaidFormSubmission } from "@/hooks/useMedicaidFormSubmission";
+import { useFormPersistence, useAutoSave } from "@/hooks/useFormPersistence";
+import { DraftRecoveryBanner } from "../ui/draft-recovery-banner";
 import { useNavigate } from "react-router-dom";
 import {
   ClientInfoSection,
@@ -25,6 +27,10 @@ import { toast } from "@/hooks/use-toast";
 const MedicaidIntakeForm = () => {
   const { loading, setClientInfo, setIncome, setAssets, setExpenses, generatePlan } = usePlanningContext();
   const navigate = useNavigate();
+  
+  // Form persistence state
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const { loadDraft, clearDraft, hasDraft, getDraftAge } = useFormPersistence();
   
   // Use our custom hooks for form data management and submission
   const {
@@ -46,22 +52,66 @@ const MedicaidIntakeForm = () => {
   const {
     activeSection,
     setActiveSection,
-    handleSubmit
+    handleSubmit,
+    progressTracking
   } = useMedicaidFormSubmission();
+  
+  // Auto-save form data
+  useAutoSave(formData, !loading);
+  
+  // Check for draft on component mount
+  useEffect(() => {
+    if (hasDraft() && !hasInteracted) {
+      setShowDraftBanner(true);
+    }
+  }, [hasDraft, hasInteracted]);
+  
+  // Draft recovery handlers
+  const handleRestoreDraft = () => {
+    const draft = loadDraft();
+    if (draft) {
+      setFormData({ ...formData, ...draft });
+      setShowDraftBanner(false);
+      toast({
+        title: "Draft Restored",
+        description: "Your previous form data has been restored.",
+      });
+    }
+  };
+  
+  const handleClearDraft = () => {
+    clearDraft();
+    setShowDraftBanner(false);
+    toast({
+      title: "Draft Cleared",
+      description: "Starting with a fresh form.",
+    });
+  };
+  
+  const handleDismissBanner = () => {
+    setShowDraftBanner(false);
+  };
+  
+  // Clear draft on successful submission - we'll handle this in the existing onSubmit
+  const clearDraftOnSuccess = () => {
+    clearDraft();
+  };
   
   // Log form validation state on load and when it changes
   useEffect(() => {
-    console.log("Form state:", { 
-      formValid, 
-      hasErrors: Object.keys(formErrors).length > 0, 
-      errors: formErrors,
-      requiredFields: {
-        applicantName: !!formData.applicantName,
-        state: !!formData.state,
-        birthDate: !!formData.applicantBirthDate,
-        maritalStatus: !!formData.maritalStatus
-      }
-    });
+    if (import.meta.env.DEV) {
+      console.log("Form state:", { 
+        formValid, 
+        hasErrors: Object.keys(formErrors).length > 0, 
+        errors: formErrors,
+        requiredFields: {
+          applicantName: !!formData.applicantName,
+          state: !!formData.state,
+          birthDate: !!formData.applicantBirthDate,
+          maritalStatus: !!formData.maritalStatus
+        }
+      });
+    }
   }, [formValid, formErrors, formData]);
   
   // Create a submission handler that passes our form data
@@ -82,6 +132,24 @@ const MedicaidIntakeForm = () => {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Medicaid Planning Intake Form</h1>
+      
+      {/* Progress Modal */}
+      <ProgressModal
+        open={loading}
+        steps={progressTracking.steps}
+        progress={progressTracking.progress}
+        message={progressTracking.message}
+      />
+      
+      {/* Draft Recovery Banner */}
+      {showDraftBanner && (
+        <DraftRecoveryBanner
+          draftAge={getDraftAge() || 0}
+          onRestore={handleRestoreDraft}
+          onDismiss={handleDismissBanner}
+          onClear={handleClearDraft}
+        />
+      )}
       
       <form onSubmit={onSubmit}>
         <Accordion 
@@ -216,17 +284,14 @@ const MedicaidIntakeForm = () => {
                 )}
                 
                 <div className="border-t pt-4 flex justify-end">
-                  <Button 
+                  <LoadingButton 
                     type="submit" 
                     className="w-full sm:w-auto bg-shield-navy hover:bg-shield-navy/90"
-                    disabled={loading}
+                    loading={loading}
+                    loadingText="Processing your application..."
                   >
-                    {loading ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
-                    ) : (
-                      "Submit Medicaid Planning Form"
-                    )}
-                  </Button>
+                    Submit Medicaid Planning Form
+                  </LoadingButton>
                 </div>
               </div>
             </AccordionContent>
