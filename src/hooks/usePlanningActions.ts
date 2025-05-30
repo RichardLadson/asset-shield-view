@@ -184,6 +184,7 @@ export const usePlanningActions = (
       // Ensure clientInfo is properly structured with required fields
       const clientInfoPayload = {
         name: effectiveClientInfo?.name || '',
+        email: effectiveClientInfo?.email || '', // Required field
         age: Number(effectiveClientInfo?.age || 0),
         maritalStatus: effectiveClientInfo?.maritalStatus || 'single',
         healthStatus: effectiveClientInfo?.healthStatus,
@@ -191,19 +192,25 @@ export const usePlanningActions = (
         state: effectiveState,
       };
       
-      // Validate required fields before sending
+      // Validate required fields before sending (email temporarily optional for existing workflow)
       if (!clientInfoPayload.name || !clientInfoPayload.age || !clientInfoPayload.maritalStatus) {
         throw new Error(`Missing required clientInfo fields: name=${clientInfoPayload.name}, age=${clientInfoPayload.age}, maritalStatus=${clientInfoPayload.maritalStatus}`);
       }
       
-      // Restructured payload to match backend expectations
+      // If no email provided, use a temporary placeholder to maintain backend compatibility
+      if (!clientInfoPayload.email) {
+        clientInfoPayload.email = `temp.${Date.now()}@medicaid-planning-demo.com`;
+        console.warn('No email provided by user, using temporary email for demo purposes');
+      }
+      
+      // Restructured payload to match backend expectations (snake_case)
       const payload = {
-        clientInfo: clientInfoPayload,
+        client_info: clientInfoPayload,
         assets: effectiveAssets || {},
         income: effectiveIncome || {},
         expenses: effectiveExpenses || {},
-        medicalInfo: effectiveMedicalInfo || {},
-        livingInfo: effectiveLivingInfo || {},
+        medical_info: effectiveMedicalInfo || {},
+        living_info: effectiveLivingInfo || {},
         state: effectiveState,
       };
       
