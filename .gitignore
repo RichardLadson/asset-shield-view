@@ -12,6 +12,27 @@ dist
 dist-ssr
 *.local
 
+# Environment files - NEVER COMMIT THESE
+.env*
+!.env.example
+*.env
+
+# Security-sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+secrets*
+credentials*
+aws-credentials*
+config*.json
+!tsconfig*.json
+!vite.config.js
+
+# Deployment scripts with sensitive info
+deploy*.sh
+*deploy*.sh
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +43,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build and deployment artifacts
+build/
+coverage/
+.nyc_output/
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db

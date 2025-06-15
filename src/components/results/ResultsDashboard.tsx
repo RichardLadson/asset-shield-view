@@ -247,8 +247,26 @@ const ResultsDashboard = () => {
     },
   ];
 
-  // Strategies are from the planning results (check both direct and data.strategies) or fallback to mock data
-  const strategies = planningResults?.strategies || planningResults?.data?.strategies || [
+  // Transform API strategies (array of strings) to frontend format (array of objects)
+  const transformApiStrategies = (apiStrategies: string[]) => {
+    return apiStrategies.map((strategy, index) => ({
+      id: index + 1,
+      name: strategy,
+      description: strategy,
+      pros: ["Recommended by Medicaid planning analysis"],
+      cons: ["Consult with professional for implementation details"],
+      effectiveness: "Recommended",
+      timing: "As recommended by analysis"
+    }));
+  };
+
+  // Get strategies from API response or fallback to mock data
+  const apiStrategies = eligibilityResults?.strategies || eligibilityResults?.data?.strategies || planningResults?.strategies || planningResults?.data?.strategies;
+  
+  // If we have API strategies as strings, transform them; otherwise use fallback
+  const strategies = apiStrategies && Array.isArray(apiStrategies) && typeof apiStrategies[0] === 'string' 
+    ? transformApiStrategies(apiStrategies)
+    : apiStrategies || [
     { 
       id: 1, 
       name: "Irrevocable Trust",
@@ -1325,23 +1343,66 @@ const ResultsDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   <p className="text-gray-700">
-                    To qualify for Medicaid long-term care benefits, you must meet both financial and medical eligibility requirements. These requirements vary by state, but generally include:
+                    Below are the specific Medicaid eligibility requirements for your state and situation. These are the actual values used in your assessment:
                   </p>
                   
                   <div className="space-y-4 mt-4">
+                    {/* State-Specific Data Section */}
+                    <div className="bg-blue-50 p-4 rounded-md">
+                      <h4 className="font-medium text-shield-navy mb-2">Your State-Specific Requirements:</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-700">State:</span>
+                          <span className="ml-2">{clientInfo?.state || eligibilityResults?.state || 'Not specified'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Marital Status:</span>
+                          <span className="ml-2">{clientInfo?.maritalStatus || 'Not specified'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Asset Limit (Your Category):</span>
+                          <span className="ml-2">{formatCurrency(eligibilityResults?.resourceLimit || 0)}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Income Limit (Your Category):</span>
+                          <span className="ml-2">{formatCurrency(eligibilityResults?.incomeLimit || 0)} per month</span>
+                        </div>
+                      </div>
+                    </div>
+
                     <div>
                       <h4 className="font-medium text-shield-navy">Asset Limits:</h4>
                       <ul className="list-disc pl-5 mt-1">
-                        <li className="text-gray-700">Single applicant: {formatCurrency(keyMetrics.medicaidAssetLimit)} in countable assets</li>
-                        <li className="text-gray-700">Married couples (if one spouse needs care): Community spouse may keep between $29,724 and $148,620 (2023 figures)</li>
+                        <li className="text-gray-700">
+                          Your applicable limit: {formatCurrency(eligibilityResults?.resourceLimit || keyMetrics.medicaidAssetLimit)} in countable assets
+                        </li>
+                        <li className="text-gray-700">
+                          Current countable assets: {formatCurrency(eligibilityResults?.countableAssets || 0)}
+                        </li>
+                        <li className="text-gray-700">
+                          Status: {eligibilityResults?.isResourceEligible ? 
+                            <span className="text-green-600 font-medium">✓ Eligible</span> : 
+                            <span className="text-red-600 font-medium">✗ Exceeds limit by {formatCurrency(eligibilityResults?.excessResources || 0)}</span>
+                          }
+                        </li>
                       </ul>
                     </div>
                     
                     <div>
                       <h4 className="font-medium text-shield-navy">Income Limits:</h4>
                       <ul className="list-disc pl-5 mt-1">
-                        <li className="text-gray-700">Income limit: {formatCurrency(keyMetrics.medicaidIncomeLimit)} per month (300% of SSI federal benefit rate)</li>
-                        <li className="text-gray-700">Some states have "medically needy" programs for those with higher incomes</li>
+                        <li className="text-gray-700">
+                          Your applicable limit: {formatCurrency(eligibilityResults?.incomeLimit || keyMetrics.medicaidIncomeLimit)} per month
+                        </li>
+                        <li className="text-gray-700">
+                          Current monthly income: {formatCurrency(eligibilityResults?.totalIncome || 0)}
+                        </li>
+                        <li className="text-gray-700">
+                          Status: {eligibilityResults?.isIncomeEligible ? 
+                            <span className="text-green-600 font-medium">✓ Eligible</span> : 
+                            <span className="text-red-600 font-medium">✗ Exceeds limit</span>
+                          }
+                        </li>
                       </ul>
                     </div>
                     
@@ -1351,6 +1412,16 @@ const ResultsDashboard = () => {
                         Medicaid examines all financial transactions during the 5-year period prior to application to identify potentially disqualifying transfers.
                       </p>
                     </div>
+
+                    {/* Debug Section for Development */}
+                    {import.meta.env.DEV && eligibilityResults && (
+                      <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                        <h4 className="font-medium text-yellow-800 mb-2">🔍 Debug: All API Data</h4>
+                        <pre className="text-xs text-yellow-700 overflow-auto max-h-40">
+                          {JSON.stringify(eligibilityResults, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="bg-shield-lightBlue p-4 rounded-md mt-4">

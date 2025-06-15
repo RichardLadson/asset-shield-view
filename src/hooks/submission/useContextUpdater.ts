@@ -53,17 +53,17 @@ export const useContextUpdater = () => {
       parseFloat(formData.householdProperty || '0') +
       parseFloat(formData.retirementAccounts || '0');
 
-    console.log("📊 Setting assets:", { countable: countableAssets, non_countable: nonCountableAssets });
+    console.log("📊 Setting assets:", { countable: countableAssets, nonCountable: nonCountableAssets });
     
     // Set assets in the simple format expected by backend
     setAssets({
       countable: countableAssets,
-      non_countable: nonCountableAssets
+      nonCountable: nonCountableAssets
     });
 
     // Calculate and set income in the format the backend expects
     const totalIncome = {
-      social_security: parseFloat(formData.applicantSocialSecurity || '0') + parseFloat(formData.spouseSocialSecurity || '0'),
+      socialSecurity: parseFloat(formData.applicantSocialSecurity || '0') + parseFloat(formData.spouseSocialSecurity || '0'),
       pension: parseFloat(formData.applicantPension || '0') + parseFloat(formData.spousePension || '0'),
       annuity: parseFloat(formData.annuityIncome || '0'),
       rental: parseFloat(formData.rentalIncome || '0'),
@@ -80,7 +80,7 @@ export const useContextUpdater = () => {
       utilities: parseFloat(formData.utilities || '0'),
       food: parseFloat(formData.food || '0'),
       medical: parseFloat(formData.medicalNonReimbursed || '0'),
-      health_insurance: parseFloat(formData.healthInsurancePremiums || '0'),
+      healthInsurance: parseFloat(formData.healthInsurancePremiums || '0'),
       transportation: parseFloat(formData.transportation || '0'),
       clothing: parseFloat(formData.clothing || '0')
     };

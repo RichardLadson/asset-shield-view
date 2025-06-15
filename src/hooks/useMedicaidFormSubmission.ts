@@ -32,9 +32,7 @@ const validateDataStructure = (data: {
   if (!data.assets) {
     errors.push("assets object is missing");
   } else {
-    if (data.assets.countable === undefined) errors.push("assets.countable is missing");
-    if (data.assets.nonCountable === undefined) errors.push("assets.nonCountable is missing");
-    
+    // Assets now contain individual fields, not just countable/nonCountable totals
     // Check for snake_case fields
     if ('non_countable' in data.assets) errors.push("assets contains snake_case field 'non_countable' (should be 'nonCountable')");
   }
@@ -148,25 +146,46 @@ export const useMedicaidFormSubmission = () => {
         isCrisis: formData.medicalStatus === 'critical'
       };
       
-      // Calculate assets
-      const countableAssets = 
-        parseFloat(formData.totalChecking || '0') +
-        parseFloat(formData.totalSavings || '0') +
-        parseFloat(formData.moneyMarket || '0') +
-        parseFloat(formData.cds || '0') +
-        parseFloat(formData.stocksBonds || '0') +
-        parseFloat(formData.lifeInsuranceCashValue || '0');
-
-      const nonCountableAssets = 
-        parseFloat(formData.homeValue || '0') +
-        parseFloat(formData.vehicleValue || '0') +
-        parseFloat(formData.householdProperty || '0') +
-        parseFloat(formData.retirementAccounts || '0');
-
+      // Calculate assets with individual fields for backend
+      console.log("🔍 DEBUG: Form data fields for assets:", {
+        totalChecking: formData.totalChecking,
+        totalSavings: formData.totalSavings,
+        moneyMarket: formData.moneyMarket,
+        cds: formData.cds,
+        stocksBonds: formData.stocksBonds,
+        lifeInsuranceCashValue: formData.lifeInsuranceCashValue,
+        otherRealEstate: formData.otherRealEstate,
+        otherAssets: formData.otherAssets,
+        homeValue: formData.homeValue,
+        outstandingMortgage: formData.outstandingMortgage,
+        householdProperty: formData.householdProperty,
+        vehicleValue: formData.vehicleValue,
+        retirementAccounts: formData.retirementAccounts
+      });
+      
       const assets = {
-        countable: countableAssets,
-        nonCountable: nonCountableAssets
+        // Countable assets (individual fields)
+        bank_accounts: parseFloat(formData.totalChecking || '0') + parseFloat(formData.totalSavings || '0'),
+        investments: parseFloat(formData.moneyMarket || '0') + parseFloat(formData.cds || '0') + parseFloat(formData.stocksBonds || '0'),
+        life_insurance_cash_value: parseFloat(formData.lifeInsuranceCashValue || '0'),
+        other_real_estate: parseFloat(formData.otherRealEstate || '0'), // COUNTABLE: Second properties, etc.
+        other_assets: parseFloat(formData.otherAssets || '0'),
+        
+        // Non-countable assets (using backend field names)
+        primary_residence: parseFloat(formData.homeValue || '0') - parseFloat(formData.outstandingMortgage || '0'), // Net equity only
+        personal_effects: parseFloat(formData.householdProperty || '0'),
+        automobile_primary: parseFloat(formData.vehicleValue || '0'),
+        retirement_accounts: parseFloat(formData.retirementAccounts || '0')
       };
+      
+      console.log("💰 DEBUG: Calculated assets object:", assets);
+      const totalCountable = assets.bank_accounts + assets.investments + assets.life_insurance_cash_value + assets.other_real_estate + assets.other_assets;
+      const totalNonCountable = assets.primary_residence + assets.personal_effects + assets.automobile_primary + assets.retirement_accounts;
+      console.log("📊 DEBUG: Asset totals:", {
+        totalCountable,
+        totalNonCountable,
+        grandTotal: totalCountable + totalNonCountable
+      });
       
       // Calculate income
       const income = {
