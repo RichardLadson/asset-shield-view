@@ -1,8 +1,8 @@
 
 import axios from 'axios';
 
-// Get the API URL from environment variable or use localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Get the API URL from environment variable or use the production endpoint
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://eligibilityapp.nationalmedicaidplanning.com';
 const isDevelopment = import.meta.env.DEV;
 
 // Only log in development
@@ -33,7 +33,7 @@ const checkApiConnection = async () => {
       console.error('2. Current allowed origin appears to be: http://localhost:8080');
       console.error('3. Add this to your server: res.header("Access-Control-Allow-Origin", "' + window.location.origin + '")');
     } else {
-      console.warn('🔌 API Client: If using ngrok, remember that free tier URLs expire after a few hours and need to be updated');
+      console.warn('🔌 API Client: If using a remote server, check that the endpoint is correct and CORS is configured');
     }
     
     return false;
