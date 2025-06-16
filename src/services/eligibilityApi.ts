@@ -37,6 +37,7 @@ export const eligibilityApi = {
     try {
       // Log the full payload being sent to API for debugging
       log("Preparing eligibility assessment request");
+      log("Current API base URL:", apiClient.defaults.baseURL);
       log("Client info data:", data.clientInfo);
       log("State:", data.state);
       log("Assets data:", data.assets);
@@ -66,38 +67,70 @@ export const eligibilityApi = {
         data.clientInfo.age = Number(data.clientInfo.age);
       }
 
-      // Network connection test before making the actual request
+      // Enhanced API connectivity test with more detailed error information
       log("Testing API connectivity before sending request...");
       
       try {
-        // Use no-cors mode for the test to see if server is up, even if CORS blocks the response
-        const testResponse = await fetch(`${apiClient.defaults.baseURL}/api/health`, { 
+        // First try a simple fetch to the base URL
+        const baseUrlTest = await fetch(`${apiClient.defaults.baseURL}`, { 
           method: 'HEAD',
-          mode: 'cors', // Try with CORS first for diagnostic purposes
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          mode: 'cors'
         });
-        log(`API connectivity test: ${testResponse.ok ? 'Success' : 'Failed'} (Status: ${testResponse.status})`);
-      } catch (error: any) {
-        // Check if this is likely a CORS issue
-        if (error.toString().includes('CORS')) {
-          log("❌ CORS ERROR DETECTED in API connectivity test:", error);
-          log("This indicates that your backend server is likely running but needs configuration changes:");
-          log("1. Frontend origin: " + window.location.origin);
-          log("2. The server needs to include this header: Access-Control-Allow-Origin: " + window.location.origin);
-          log("3. If you control the backend, add the above header to ALL responses");
-          log("4. If using Express.js, install cors middleware: npm install cors");
-          log("5. And add to your server: app.use(cors({origin: '" + window.location.origin + "'}))");
-        } else {
-          log("❌ API connectivity test failed:", error);
-          log("This suggests the API server is unreachable. Check the following:");
-          log("1. Is the backend server running?");
-          log("2. Is the API URL correct in apiClient.ts?");
-          log("3. If using ngrok, has the URL expired or changed?");
-          log("4. Are there CORS headers configured on the backend?");
+        log(`Base URL test: ${baseUrlTest.ok ? 'Success' : 'Failed'} (Status: ${baseUrlTest.status})`);
+      } catch (baseError: any) {
+        log("❌ Base URL test failed:", baseError.message);
+        
+        // Try the health endpoint
+        try {
+          const healthResponse = await fetch(`${apiClient.defaults.baseURL}/api/health`, { 
+            method: 'HEAD',
+            mode: 'cors'
+          });
+          log(`Health endpoint test: ${healthResponse.ok ? 'Success' : 'Failed'} (Status: ${healthResponse.status})`);
+        } catch (healthError: any) {
+          log("❌ Health endpoint test failed:", healthError.message);
+          
+          if (healthError.toString().includes('CORS') || healthError.message.includes('CORS')) {
+            log("❌ CORS ERROR DETECTED:");
+            log("This indicates that the backend server may be running but needs CORS configuration:");
+            log("1. Frontend origin: " + window.location.origin);
+            log("2. The server needs Access-Control-Allow-Origin header");
+            log("3. The server needs Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+            log("4. The server needs Access-Control-Allow-Headers: Content-Type, Authorization");
+          } else if (healthError.message.includes('Failed to fetch')) {
+            log("❌ NETWORK/SERVER ERROR DETECTED:");
+            log("This suggests the API server is unreachable:");
+            log("1. Check if the backend server is running");
+            log("2. Verify the API URL is correct: " + apiClient.defaults.baseURL);
+            log("3. Check if there are any network connectivity issues");
+            log("4. If using a hosting service, verify the deployment is active");
+          }
+          
+          // For development, provide a mock response so the UI can be tested
+          if (DEBUG) {
+            log("🔧 Development mode: Returning mock eligibility response for testing");
+            return {
+              status: 'success',
+              data: {
+                isResourceEligible: false,
+                isIncomeEligible: true,
+                resourceAmount: 197000,
+                incomeAmount: 3600,
+                resourceLimit: 2000,
+                incomeLimit: 4000,
+                excessResources: 195000,
+                strategies: [
+                  'Consider spending down excess resources on exempt assets',
+                  'Explore Medicaid planning strategies like asset protection trusts',
+                  'Consult with an elder law attorney for personalized advice'
+                ],
+                reasoning: 'Mock response for development testing - API server unreachable'
+              }
+            } as ApiResponse<any>;
+          }
+          
+          throw new Error("API server is unreachable. Please check if the backend server is running and accessible.");
         }
-        throw new Error("API server is unreachable. Check console for troubleshooting steps.");
       }
       
       log("Sending API request to: /api/eligibility/assess");
@@ -118,24 +151,30 @@ export const eligibilityApi = {
           status: error.response?.status,
           statusText: error.response?.statusText,
           data: error.response?.data,
-          headers: error.response?.headers
+          headers: error.response?.headers,
+          message: error.message
         };
         
-        log("API Error details:", errorDetails);
+        log("Axios Error details:", errorDetails);
 
-        // CORS or network related errors
+        // Enhanced error categorization
         if (!error.response) {
-          if (error.message?.includes('Network Error') || error.message?.includes('CORS')) {
-            log("This appears to be a CORS issue.");
+          if (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
+            log("❌ NETWORK/CONNECTION ERROR:");
             log("Frontend origin: " + window.location.origin);
-            log("Backend server needs to set: Access-Control-Allow-Origin: " + window.location.origin);
-            log("If using Express.js: app.use(cors({origin: '" + window.location.origin + "'}))");
-          } else {
-            log("This appears to be a network error.");
-            log("1. Check that your backend server is running");
-            log("2. Ensure CORS is properly configured on the backend");
-            log("3. If using ngrok, verify the URL is current (they expire after a few hours on free tier)");
-            log("4. Current API URL:", apiClient.defaults.baseURL);
+            log("API URL: " + apiClient.defaults.baseURL);
+            log("Possible causes:");
+            log("1. Backend server is not running");
+            log("2. Incorrect API URL");
+            log("3. Network connectivity issues");
+            log("4. Server deployment issues");
+          } else if (error.message?.includes('CORS')) {
+            log("❌ CORS ERROR:");
+            log("Frontend origin: " + window.location.origin);
+            log("Backend needs CORS headers:");
+            log("Access-Control-Allow-Origin: " + window.location.origin);
+            log("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+            log("Access-Control-Allow-Headers: Content-Type, Authorization");
           }
         }
         
