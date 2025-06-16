@@ -247,8 +247,38 @@ const ResultsDashboard = () => {
     },
   ];
 
-  // Transform API strategies (array of strings) to frontend format (array of objects)
-  const transformApiStrategies = (apiStrategies: string[]) => {
+  // Transform enhanced API strategies to frontend format
+  const transformEnhancedStrategies = (apiStrategies: any[]) => {
+    return apiStrategies.map((strategy) => ({
+      id: strategy.id,
+      name: strategy.friendlyName || strategy.formalName || strategy.name,
+      formalName: strategy.formalName || strategy.name,
+      friendlyName: strategy.friendlyName || strategy.name,
+      timingCategory: strategy.timingCategory,
+      badgeText: strategy.badgeText,
+      savingsDescription: strategy.savingsDescription,
+      emotionalHook: strategy.emotionalHook,
+      plainEnglishExplanation: strategy.plainEnglishExplanation || strategy.description,
+      realBenefits: strategy.realBenefits || (strategy.pros ? strategy.pros.map((pro: string) => ({ title: pro })) : []),
+      whatToKnow: strategy.whatToKnow || strategy.cons || ["Consult with professional for implementation details"],
+      effectivenessMetrics: strategy.effectivenessMetrics || {
+        successRate: strategy.effectivenessScore ? `${strategy.effectivenessScore}/10` : "N/A",
+        protectionAmount: "Varies",
+        timeToImplement: "Varies"
+      },
+      bottomLine: strategy.bottomLine,
+      effectivenessScore: strategy.effectivenessScore,
+      // Legacy fields for compatibility
+      description: strategy.plainEnglishExplanation || strategy.description,
+      pros: strategy.realBenefits ? strategy.realBenefits.map((benefit: any) => benefit.title || benefit.description || benefit) : ["Recommended by analysis"],
+      cons: strategy.whatToKnow || ["Consult with professional for implementation details"],
+      effectiveness: strategy.effectivenessScore ? `${strategy.effectivenessScore}/10` : "Recommended",
+      timing: strategy.effectivenessMetrics?.timeToImplement || strategy.timing || "As recommended by analysis"
+    }));
+  };
+
+  // Transform legacy API strategies (array of strings) to frontend format (array of objects)
+  const transformLegacyStrategies = (apiStrategies: string[]) => {
     return apiStrategies.map((strategy, index) => ({
       id: index + 1,
       name: strategy,
@@ -263,10 +293,21 @@ const ResultsDashboard = () => {
   // Get strategies from API response or fallback to mock data
   const apiStrategies = eligibilityResults?.strategies || eligibilityResults?.data?.strategies || planningResults?.strategies || planningResults?.data?.strategies;
   
-  // If we have API strategies as strings, transform them; otherwise use fallback
-  const strategies = apiStrategies && Array.isArray(apiStrategies) && typeof apiStrategies[0] === 'string' 
-    ? transformApiStrategies(apiStrategies)
-    : apiStrategies || [
+  // Transform strategies based on their format
+  let strategies = [];
+  if (apiStrategies && Array.isArray(apiStrategies)) {
+    if (typeof apiStrategies[0] === 'string') {
+      // Legacy string format
+      strategies = transformLegacyStrategies(apiStrategies);
+    } else if (apiStrategies[0] && typeof apiStrategies[0] === 'object') {
+      // Enhanced object format
+      strategies = transformEnhancedStrategies(apiStrategies);
+    }
+  }
+  
+  // If no strategies or transformation failed, use fallback
+  if (!strategies || strategies.length === 0) {
+    strategies = [
     { 
       id: 1, 
       name: "Irrevocable Trust",
@@ -294,7 +335,8 @@ const ResultsDashboard = () => {
       effectiveness: "Medium",
       timing: "Implement before application"
     }
-  ];
+    ];
+  }
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -978,38 +1020,31 @@ const ResultsDashboard = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[300px]">Requirement</TableHead>
-                <TableHead>Your Situation</TableHead>
-                <TableHead>Medicaid Limit</TableHead>
-                <TableHead className="text-right">Impact</TableHead>
+                <TableHead className="w-[200px]">Requirement</TableHead>
+                <TableHead>What You Have</TableHead>
+                <TableHead>Medicaid Allows</TableHead>
+                <TableHead className="text-right">What You Risk Losing</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell className="font-medium">Asset Limit</TableCell>
+                <TableCell className="font-medium">Assets</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.assetsAtRisk)}</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
-                <TableCell className="text-right text-red-600 font-medium">
+                <TableCell className="text-right">
                   {keyMetrics.assetSpendDownRequired > 0 
-                    ? `${formatCurrency(keyMetrics.assetSpendDownRequired)} spend-down required`
-                    : 'Already eligible'}
+                    ? <span className="text-red-600 font-medium">{formatCurrency(keyMetrics.assetSpendDownRequired)} must be spent</span>
+                    : <span className="text-green-600 font-medium">✓ Already qualified</span>}
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium">Monthly Income Limit</TableCell>
+                <TableCell className="font-medium">Monthly Income</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.clientMonthlyIncome)}</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.medicaidIncomeLimit)}</TableCell>
-                <TableCell className="text-right text-red-600 font-medium">
-                  {formatCurrency(keyMetrics.monthlyIncomeAtRisk)} monthly income at risk
-                </TableCell>
-              </TableRow>
-              <TableRow className="bg-red-100/50">
-                <TableCell className="font-bold">Time Until Assets Depleted</TableCell>
-                <TableCell colSpan={2}>
-                  Paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month in total expenses
-                </TableCell>
-                <TableCell className="text-right text-red-600 font-bold">
-                  {keyMetrics.monthsUntilDepleted} months ({Math.floor(keyMetrics.monthsUntilDepleted/12)} years, {keyMetrics.monthsUntilDepleted % 12} months)
+                <TableCell className="text-right">
+                  {keyMetrics.monthlyIncomeAtRisk > 0
+                    ? <span className="text-red-600 font-medium">{formatCurrency(keyMetrics.monthlyIncomeAtRisk)} over limit</span>
+                    : <span className="text-green-600 font-medium">✓ Already qualified</span>}
                 </TableCell>
               </TableRow>
             </TableBody>
@@ -1033,32 +1068,32 @@ const ResultsDashboard = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px]">Category</TableHead>
-                <TableHead>Without Planning</TableHead>
                 <TableHead>With Planning</TableHead>
+                <TableHead>Without Planning</TableHead>
                 <TableHead className="text-right">Total Savings</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
                 <TableCell className="font-medium">Assets Protected</TableCell>
-                <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.protectableAssets)}</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
                 <TableCell className="text-right text-green-600 font-medium">
                   {formatCurrency(keyMetrics.protectableAssets - keyMetrics.medicaidAssetLimit)}
                 </TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">Monthly Income Protected</TableCell>
-                <TableCell>{formatCurrency(keyMetrics.medicaidIncomeLimit)}</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.medicaidIncomeLimit + keyMetrics.protectableIncome)}</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidIncomeLimit)}</TableCell>
                 <TableCell className="text-right text-green-600 font-medium">
                   {formatCurrency(keyMetrics.protectableIncome)} per month
                 </TableCell>
               </TableRow>
               <TableRow className="bg-green-100/50">
                 <TableCell className="font-bold">Total Value Protected</TableCell>
-                <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
                 <TableCell>{formatCurrency(keyMetrics.protectableAssets)}</TableCell>
+                <TableCell>{formatCurrency(keyMetrics.medicaidAssetLimit)}</TableCell>
                 <TableCell className="text-right text-green-600 font-bold">
                   {formatCurrency(keyMetrics.totalAssetSavings)}
                 </TableCell>
@@ -1068,21 +1103,48 @@ const ResultsDashboard = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="h-4 w-4 text-shield-navy" />
-              Time Before Assets Depleted
-            </CardTitle>
-            <CardDescription>Without Medicaid planning</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-shield-navy">{keyMetrics.monthsUntilDepleted} months</div>
-            <div className="text-sm text-gray-500">({Math.floor(keyMetrics.monthsUntilDepleted/12)} years, {keyMetrics.monthsUntilDepleted % 12} months)</div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Financial Countdown - Create Urgency */}
+      <Card className="mb-8 border-red-300 bg-red-50/40">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl text-red-700 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-red-600" />
+            Your Financial Countdown
+          </CardTitle>
+          <CardDescription className="text-red-600 font-medium">
+            At {formatCurrency(keyMetrics.monthlyLTCCost)}/month in care costs:
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⏰</span>
+              <div>
+                <div className="text-2xl font-bold text-red-700">{keyMetrics.monthsUntilDepleted} months until your life savings are gone</div>
+                <div className="text-sm text-red-600">({Math.floor(keyMetrics.monthsUntilDepleted/12)} years, {keyMetrics.monthsUntilDepleted % 12} months)</div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📅</span>
+              <div className="text-lg text-red-700">
+                That's <span className="font-bold">
+                  {new Date(Date.now() + keyMetrics.monthsUntilDepleted * 30.44 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    year: 'numeric' 
+                  })}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">💰</span>
+              <div className="text-lg text-red-700">
+                <span className="font-bold">{formatCurrency(keyMetrics.assetSpendDownRequired)}</span> will disappear forever
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Enhanced tab navigation - more prominent styling */}
       <div className="relative mb-2">
@@ -1178,32 +1240,118 @@ const ResultsDashboard = () => {
               </Card>
             </div>
 
+            {/* Your Medicaid Asset Protection Report */}
             <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Your Medicaid Planning Story</CardTitle>
-                <CardDescription>
-                  Understanding the financial impact of Medicaid planning on your situation
+              <CardHeader className="text-center border-b-4 border-shield-navy pb-4">
+                <CardTitle className="text-2xl text-shield-navy">Your Medicaid Asset Protection Report</CardTitle>
+                <CardDescription className="text-lg text-gray-600">
+                  Protect Your Life's Work While Qualifying for Benefits
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <p className="text-gray-700">
-                    Based on your financial situation, qualifying for Medicaid without proper planning would require you to spend down <span className="font-semibold text-red-600">{formatCurrency(keyMetrics.assetSpendDownRequired)}</span> of your assets and reduce your monthly income by <span className="font-semibold text-red-600">{formatCurrency(keyMetrics.monthlyIncomeAtRisk)}</span>.
-                  </p>
-                  
-                  <p className="text-gray-700">
-                    At your current level of assets ({formatCurrency(keyMetrics.assetsAtRisk)}), paying {formatCurrency(keyMetrics.monthlyLTCCost)} per month in total expenses {expenses?.medicalTotal && expenses.medicalTotal > 0 ? 
-                      `(including ${formatCurrency(expenses.medicalTotal)} for medical/nursing home care)` : 
-                      ''} would deplete your savings in approximately <span className="font-semibold text-red-600">{keyMetrics.monthsUntilDepleted} months</span>, leaving you financially vulnerable.
-                  </p>
-                  
-                  <div className="p-4 bg-green-50 rounded-md border border-green-200 my-6">
-                    <h4 className="text-shield-navy font-semibold text-lg mb-2">The Medicaid Planning Advantage</h4>
-                    <p className="text-gray-700">
-                      With our recommended Medicaid planning strategies, you can protect approximately <span className="font-semibold text-green-600">{formatCurrency(keyMetrics.protectableAssets)}</span> of your assets and <span className="font-semibold text-green-600">{formatCurrency(keyMetrics.protectableIncome)}</span> of monthly income while still qualifying for Medicaid benefits.
+                <div className="space-y-6">
+                  {/* Emotional Hook */}
+                  <div className="bg-gray-50 p-6 border-l-4 border-shield-navy text-gray-700 text-lg leading-relaxed">
+                    <strong>You've worked your entire life to build financial security.</strong> You've saved, invested, and planned for the future. Now, with care costs of {formatCurrency(keyMetrics.monthlyLTCCost)} per month threatening to wipe out everything you've built, you're facing an impossible choice: get the care you need or preserve your legacy.
+                    <br /><br />
+                    <strong>But here's what most people don't know:</strong> There's a completely legal way to protect your assets AND qualify for Medicaid benefits.
+                  </div>
+
+                  {/* Countdown Warning */}
+                  <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 text-center">
+                    <div className="text-yellow-800 text-xl font-bold mb-4">⚠️ Your Financial Countdown</div>
+                    <div className="space-y-3 text-yellow-800">
+                      <div className="text-lg">
+                        <span className="text-2xl mr-3">💰</span>Current care costs: <strong>{formatCurrency(keyMetrics.monthlyLTCCost)}/month</strong>
+                      </div>
+                      <div className="text-lg">
+                        <span className="text-2xl mr-3">⏰</span>Time until savings depleted: <strong>{keyMetrics.monthsUntilDepleted} months</strong>
+                      </div>
+                      <div className="text-lg">
+                        <span className="text-2xl mr-3">📅</span>That's <strong>
+                          {new Date(Date.now() + keyMetrics.monthsUntilDepleted * 30.44 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
+                            month: 'long', 
+                            year: 'numeric' 
+                          })}
+                        </strong>
+                      </div>
+                      <div className="text-lg">
+                        <span className="text-2xl mr-3">🔥</span>Total at risk: <strong className="text-red-600">{formatCurrency(keyMetrics.assetSpendDownRequired)}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Path Comparison */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+                    <div className="bg-red-50 border-2 border-red-500 rounded-lg p-6 text-center">
+                      <div className="text-red-900 text-xl font-bold mb-4">Path 1: Do Nothing</div>
+                      <div className="text-3xl font-bold text-red-600 my-4">LOSE {formatCurrency(keyMetrics.assetSpendDownRequired)}</div>
+                      <p className="text-red-700">Watch your life savings disappear<br />in less than 2 years</p>
+                    </div>
+                    <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
+                      <div className="text-green-900 text-xl font-bold mb-4">Path 2: Protect Your Assets</div>
+                      <div className="text-3xl font-bold text-green-600 my-4">SAVE {formatCurrency(keyMetrics.protectableAssets)}</div>
+                      <p className="text-green-700">Keep {protectionPercentage}% of your assets<br />AND qualify for Medicaid</p>
+                    </div>
+                  </div>
+
+                  {/* What Protection Provides */}
+                  <div className="bg-green-50 border-2 border-green-500 rounded-lg p-8">
+                    <div className="text-green-900 text-2xl font-bold text-center mb-6">What Medicaid Planning Protects For You</div>
+                    <div className="space-y-4">
+                      <div className="flex items-start text-green-800 text-lg">
+                        <span className="text-green-500 text-xl mr-3">✓</span>
+                        <span><strong>{formatCurrency(keyMetrics.protectableAssets)} protected</strong> - Your financial cushion remains intact</span>
+                      </div>
+                      <div className="flex items-start text-green-800 text-lg">
+                        <span className="text-green-500 text-xl mr-3">✓</span>
+                        <span><strong>Your monthly income</strong> - Keep receiving {formatCurrency(keyMetrics.clientMonthlyIncome)}/month</span>
+                      </div>
+                      <div className="flex items-start text-green-800 text-lg">
+                        <span className="text-green-500 text-xl mr-3">✓</span>
+                        <span><strong>Your home</strong> - May be protected for your spouse or family</span>
+                      </div>
+                      <div className="flex items-start text-green-800 text-lg">
+                        <span className="text-green-500 text-xl mr-3">✓</span>
+                        <span><strong>Your legacy</strong> - Leave something meaningful to loved ones</span>
+                      </div>
+                      <div className="flex items-start text-green-800 text-lg">
+                        <span className="text-green-500 text-xl mr-3">✓</span>
+                        <span><strong>Your dignity</strong> - Qualify for benefits without becoming destitute</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Legal Assurance */}
+                  <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-6 text-center">
+                    <div className="text-blue-800 text-xl font-bold mb-3">🛡️ This is 100% Legal</div>
+                    <p className="text-blue-700">
+                      Medicaid planning uses government-approved strategies that have been available for decades. You're not hiding assets or doing anything wrong - you're simply using the same rules that wealthy families have used to protect their legacies while qualifying for benefits.
                     </p>
-                    <p className="text-gray-700 mt-2">
-                      This means you can secure quality long-term care through Medicaid while preserving <span className="font-semibold text-green-600">{protectionPercentage}%</span> of your assets for your financial security and legacy.
+                  </div>
+
+                  {/* Next Steps */}
+                  <div className="bg-shield-navy text-white rounded-lg p-8 text-center">
+                    <h3 className="text-2xl font-bold mb-4">Your Next Step to Financial Protection</h3>
+                    <p className="text-lg mb-6">In our upcoming strategy call, we'll discuss:</p>
+                    <div className="space-y-3 text-left max-w-md mx-auto">
+                      <div className="text-lg">✓ Which specific strategies work best for YOUR situation</div>
+                      <div className="text-lg">✓ How quickly we can start protecting your assets</div>
+                      <div className="text-lg">✓ What documents you'll need to get started</div>
+                      <div className="text-lg">✓ Your personalized protection timeline</div>
+                    </div>
+                    <p className="text-base mt-6 mb-6">
+                      After our call, you'll have the option to meet with our specialized Medicaid planning attorney who can implement your customized protection plan.
+                    </p>
+                    <Button className="bg-white text-shield-navy hover:bg-gray-100 text-lg px-8 py-3 font-bold">
+                      Ready to Protect Your Assets
+                    </Button>
+                  </div>
+
+                  {/* Final Warning */}
+                  <div className="text-center text-gray-600 mt-8">
+                    <p className="text-lg">
+                      <strong>Don't wait.</strong> Every month you delay costs you {formatCurrency(keyMetrics.monthlyLTCCost)} from your life savings.
                     </p>
                   </div>
                 </div>
@@ -1214,58 +1362,213 @@ const ResultsDashboard = () => {
           {/* Strategies Tab Content */}
           <TabsContent value="strategies" className="mt-6">
             <div className="space-y-6">
-              {strategies.map((strategy: any) => (
-                <Card key={strategy.id}>
-                  <CardHeader>
-                    <CardTitle>{strategy.name}</CardTitle>
-                    <CardDescription>{strategy.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div>
-                        <h4 className="font-medium text-shield-navy mb-2">Benefits</h4>
-                        <ul className="list-disc pl-5 space-y-1">
-                          {strategy.pros.map((pro: string, index: number) => (
-                            <li key={index} className="text-gray-700">{pro}</li>
-                          ))}
-                        </ul>
+              {/* Page Header */}
+              <div className="text-center mb-10 pb-6 border-b-4 border-shield-navy">
+                <h1 className="text-3xl font-bold text-shield-navy mb-3">Your Personalized Protection Strategies</h1>
+                <p className="text-lg text-gray-600">
+                  Based on your situation, here are the best ways to protect your {formatCurrency(keyMetrics.protectableAssets)}
+                </p>
+              </div>
+
+              {/* Intro Box */}
+              <div className="bg-gray-50 p-6 rounded-lg text-lg leading-relaxed">
+                <strong>Good news!</strong> You have multiple strategies available that can protect your assets while qualifying for Medicaid. We've identified the most effective approaches for your situation, organized by how quickly they can help you. The strategies marked in <span className="text-green-600 font-bold">green</span> can be implemented immediately with no waiting period.
+              </div>
+
+              {/* Enhanced Strategy Cards - Organized by Legal vs Financial */}
+              {(() => {
+                // Categorize strategies into Legal vs Financial
+                const legalStrategies = [
+                  'Irrevocable Trust Planning',
+                  'Spousal Transfer Strategy', 
+                  'Primary Residence Protection Strategy',
+                  'Caregiver Child Exception Strategy',
+                  'Half-a-Loaf Strategy'
+                ];
+
+                const categorizeStrategy = (strategy: any) => {
+                  return legalStrategies.includes(strategy.formalName) ? 'legal' : 'financial';
+                };
+
+                const legalStrategiesList = strategies.filter(s => categorizeStrategy(s) === 'legal');
+                const financialStrategiesList = strategies.filter(s => categorizeStrategy(s) === 'financial');
+
+                // Strategy Card Renderer Function
+                const renderStrategyCard = (strategy: any) => {
+                  // Determine strategy type and styling based on timing category
+                  const getStrategyType = (timingCategory: string) => {
+                    switch (timingCategory) {
+                      case 'immediate':
+                        return {
+                          containerClass: 'border-2 border-green-200 hover:border-green-400 hover:shadow-xl transition-all duration-300',
+                          headerClass: 'bg-green-50 border-b-2 border-green-500',
+                          titleClass: 'text-green-800',
+                          badgeClass: 'bg-green-500 text-white',
+                          badgeText: '🟢 IMMEDIATE - No Waiting!'
+                        };
+                      case 'long_term':
+                        return {
+                          containerClass: 'border-2 border-yellow-200 hover:border-yellow-400 hover:shadow-xl transition-all duration-300',
+                          headerClass: 'bg-yellow-50 border-b-2 border-yellow-500',
+                          titleClass: 'text-yellow-800',
+                          badgeClass: 'bg-yellow-500 text-white',
+                          badgeText: '🟡 LONG-TERM - Plan Ahead'
+                        };
+                      default:
+                        return {
+                          containerClass: 'border-2 border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300',
+                          headerClass: 'bg-blue-50 border-b-2 border-blue-500',
+                          titleClass: 'text-blue-800',
+                          badgeClass: 'bg-blue-500 text-white',
+                          badgeText: '🔵 SPECIALIZED - Custom Solution'
+                        };
+                    }
+                  };
+
+                  const strategyType = getStrategyType(strategy.timingCategory || strategy.timing);
+
+                  return (
+                    <div key={strategy.id} className={`rounded-lg overflow-hidden ${strategyType.containerClass} mb-6`}>
+                      {/* Strategy Header */}
+                      <div className={`p-6 relative ${strategyType.headerClass}`}>
+                        <div className="absolute top-4 right-5">
+                          <span className={`px-4 py-1 rounded-full text-sm font-bold ${strategyType.badgeClass}`}>
+                            {strategyType.badgeText}
+                          </span>
+                        </div>
+                        <h2 className={`text-2xl font-bold mb-2 ${strategyType.titleClass} pr-48`}>
+                          {strategy.friendlyName || strategy.name}
+                        </h2>
+                        <div className="text-sm text-gray-600 italic mb-4">
+                          What attorneys call it: {strategy.formalName}
+                        </div>
+                        <div className="text-xl font-bold flex items-center gap-3">
+                          <span>💰</span>
+                          <span>What This Saves You: {strategy.savingsDescription || `Up to ${formatCurrency(keyMetrics.protectableAssets)}`}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-medium text-shield-navy mb-2">Limitations</h4>
-                        <ul className="list-disc pl-5 space-y-1">
-                          {strategy.cons.map((con: string, index: number) => (
-                            <li key={index} className="text-gray-700">{con}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <div className="mb-4">
-                          <h4 className="font-medium text-shield-navy mb-1">Effectiveness</h4>
-                          <div className="flex items-center">
-                            <div className={`h-2.5 rounded-full w-full ${
-                              strategy.effectiveness === "High" 
-                                ? "bg-green-500" 
-                                : strategy.effectiveness === "Medium-High"
-                                ? "bg-teal-500"
-                                : "bg-yellow-500"
-                            }`}></div>
-                            <span className="ml-2 text-sm text-gray-700">{strategy.effectiveness}</span>
+
+                      {/* Strategy Body */}
+                      <div className="p-6">
+                        {/* Emotional Hook */}
+                        <div className="text-lg italic text-gray-700 mb-6 pl-5 border-l-4 border-shield-navy">
+                          "{strategy.emotionalHook || strategy.description}"
+                        </div>
+
+                        {/* Plain English Explanation */}
+                        <div className="bg-gray-50 p-5 rounded-lg mb-6">
+                          <div className="font-bold text-shield-navy mb-3">How It Works in Plain English:</div>
+                          <p className="text-gray-700">
+                            {strategy.plainEnglishExplanation || strategy.description}
+                          </p>
+                        </div>
+
+                        {/* Benefits Section */}
+                        <div className="mb-6">
+                          <div className="text-lg font-bold text-shield-navy mb-4">Real Benefits for Your Family:</div>
+                          <div className="space-y-3">
+                            {(strategy.realBenefits || strategy.pros || []).map((benefit: any, index: number) => (
+                              <div key={index} className="flex items-start gap-3 text-base">
+                                <span className="text-green-500 text-xl flex-shrink-0">✓</span>
+                                <span>
+                                  <strong>{typeof benefit === 'object' ? benefit.title : benefit}</strong>
+                                  {typeof benefit === 'object' && benefit.description && (
+                                    <span className="text-gray-600"> - {benefit.description}</span>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                        <div>
-                          <h4 className="font-medium text-shield-navy mb-1">Timing</h4>
-                          <p className="text-sm text-gray-700">{strategy.timing}</p>
+
+                        {/* Limitations Section */}
+                        <div className="bg-gray-50 p-5 rounded-lg mb-6">
+                          <div className="font-bold text-gray-700 mb-3">What to Know:</div>
+                          <div className="space-y-2">
+                            {(strategy.whatToKnow || strategy.cons || []).map((limitation: string, index: number) => (
+                              <div key={index} className="text-gray-600 text-sm pl-5 relative">
+                                <span className="absolute left-1">•</span>
+                                {limitation}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Effectiveness Box */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                          <div className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-sm text-gray-600 mb-2">Success Rate</div>
+                            <div className="text-xl font-bold text-shield-navy">
+                              {strategy.effectivenessMetrics?.successRate || `${strategy.effectivenessScore || 8}/10`}
+                            </div>
+                          </div>
+                          <div className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-sm text-gray-600 mb-2">Protection Amount</div>
+                            <div className="text-xl font-bold text-shield-navy">
+                              {strategy.effectivenessMetrics?.protectionAmount || strategy.savingsDescription || 'Varies'}
+                            </div>
+                          </div>
+                          <div className="text-center p-4 bg-gray-50 rounded-lg">
+                            <div className="text-sm text-gray-600 mb-2">Time to Implement</div>
+                            <div className="text-xl font-bold text-shield-navy">
+                              {strategy.effectivenessMetrics?.timeToImplement || strategy.timing || 'Varies'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bottom Line */}
+                        <div className="bg-shield-navy text-white p-5 rounded-lg text-lg font-bold text-center mb-5">
+                          💡 The Bottom Line: {strategy.bottomLine || 'This strategy provides significant protection for your assets while maintaining Medicaid eligibility.'}
+                        </div>
+
+                        {/* CTA Button */}
+                        <div className="text-center">
+                          <Button className="bg-white text-shield-navy border-2 border-shield-navy hover:bg-shield-navy hover:text-white text-base px-8 py-3 font-bold transition-all duration-300">
+                            Learn More About This Strategy
+                          </Button>
                         </div>
                       </div>
                     </div>
-                    <div className="mt-6 text-center">
-                      <Button className="bg-shield-navy hover:bg-shield-navy/90">
-                        Learn More About This Strategy
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  );
+                };
+
+                return (
+                  <>
+                    {/* Legal Strategies Section */}
+                    {legalStrategiesList.length > 0 && (
+                      <>
+                        <div className="mt-8 mb-6">
+                          <h2 className="text-2xl font-bold text-shield-navy mb-2">⚖️ Legal Protection Strategies</h2>
+                          <p className="text-gray-600">These strategies use legal structures and rules to protect your assets</p>
+                        </div>
+                        {legalStrategiesList.map((strategy: any) => renderStrategyCard(strategy))}
+                      </>
+                    )}
+
+                    {/* Financial Strategies Section */}
+                    {financialStrategiesList.length > 0 && (
+                      <>
+                        <div className="mt-8 mb-6">
+                          <h2 className="text-2xl font-bold text-shield-navy mb-2">💰 Financial Protection Strategies</h2>
+                          <p className="text-gray-600">These strategies use financial products and conversions to protect your wealth</p>
+                        </div>
+                        {financialStrategiesList.map((strategy: any) => renderStrategyCard(strategy))}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Summary Box */}
+              <div className="bg-shield-navy text-white p-8 rounded-lg text-center mt-10">
+                <h2 className="text-2xl font-bold mb-4">Your Next Step to Protecting {formatCurrency(keyMetrics.protectableAssets)}</h2>
+                <p className="text-lg mb-4">
+                  These are just {strategies.length} of the strategies available to protect your assets. On our call, we'll review which combination works best for your specific situation and answer all your questions.
+                </p>
+                <p className="text-xl font-bold">
+                  Remember: Every month you wait costs you {formatCurrency(keyMetrics.monthlyLTCCost)} from your savings.
+                </p>
+              </div>
             </div>
           </TabsContent>
 
@@ -1341,96 +1644,115 @@ const ResultsDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <p className="text-gray-700">
-                    Below are the specific Medicaid eligibility requirements for your state and situation. These are the actual values used in your assessment:
-                  </p>
-                  
-                  <div className="space-y-4 mt-4">
-                    {/* State-Specific Data Section */}
-                    <div className="bg-blue-50 p-4 rounded-md">
-                      <h4 className="font-medium text-shield-navy mb-2">Your State-Specific Requirements:</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-gray-700">State:</span>
-                          <span className="ml-2">{clientInfo?.state || eligibilityResults?.state || 'Not specified'}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Marital Status:</span>
-                          <span className="ml-2">{clientInfo?.maritalStatus || 'Not specified'}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Asset Limit (Your Category):</span>
-                          <span className="ml-2">{formatCurrency(eligibilityResults?.resourceLimit || 0)}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Income Limit (Your Category):</span>
-                          <span className="ml-2">{formatCurrency(eligibilityResults?.incomeLimit || 0)} per month</span>
+                {/* Enhanced HTML Report (if available) */}
+                {eligibilityResults?.enhancedReport ? (
+                  <div 
+                    className="enhanced-eligibility-report"
+                    style={{
+                      /* Reset any inherited styles */
+                      all: 'initial',
+                      /* Restore some essential display properties */
+                      display: 'block',
+                      width: '100%',
+                      fontFamily: 'inherit',
+                      lineHeight: 'inherit',
+                      color: 'inherit'
+                    }}
+                    dangerouslySetInnerHTML={{ __html: eligibilityResults.enhancedReport }}
+                  />
+                ) : (
+                  /* Fallback to basic eligibility display */
+                  <div className="space-y-4">
+                    <p className="text-gray-700">
+                      Below are the specific Medicaid eligibility requirements for your state and situation. These are the actual values used in your assessment:
+                    </p>
+                    
+                    <div className="space-y-4 mt-4">
+                      {/* State-Specific Data Section */}
+                      <div className="bg-blue-50 p-4 rounded-md">
+                        <h4 className="font-medium text-shield-navy mb-2">Your State-Specific Requirements:</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-700">State:</span>
+                            <span className="ml-2">{clientInfo?.state || eligibilityResults?.state || 'Not specified'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Marital Status:</span>
+                            <span className="ml-2">{clientInfo?.maritalStatus || 'Not specified'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Asset Limit (Your Category):</span>
+                            <span className="ml-2">{formatCurrency(eligibilityResults?.resourceLimit || 0)}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Income Limit (Your Category):</span>
+                            <span className="ml-2">{formatCurrency(eligibilityResults?.incomeLimit || 0)} per month</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div>
-                      <h4 className="font-medium text-shield-navy">Asset Limits:</h4>
-                      <ul className="list-disc pl-5 mt-1">
-                        <li className="text-gray-700">
-                          Your applicable limit: {formatCurrency(eligibilityResults?.resourceLimit || keyMetrics.medicaidAssetLimit)} in countable assets
-                        </li>
-                        <li className="text-gray-700">
-                          Current countable assets: {formatCurrency(eligibilityResults?.countableAssets || 0)}
-                        </li>
-                        <li className="text-gray-700">
-                          Status: {eligibilityResults?.isResourceEligible ? 
-                            <span className="text-green-600 font-medium">✓ Eligible</span> : 
-                            <span className="text-red-600 font-medium">✗ Exceeds limit by {formatCurrency(eligibilityResults?.excessResources || 0)}</span>
-                          }
-                        </li>
-                      </ul>
+                      <div>
+                        <h4 className="font-medium text-shield-navy">Asset Limits:</h4>
+                        <ul className="list-disc pl-5 mt-1">
+                          <li className="text-gray-700">
+                            Your applicable limit: {formatCurrency(eligibilityResults?.resourceLimit || keyMetrics.medicaidAssetLimit)} in countable assets
+                          </li>
+                          <li className="text-gray-700">
+                            Current countable assets: {formatCurrency(eligibilityResults?.countableAssets || 0)}
+                          </li>
+                          <li className="text-gray-700">
+                            Status: {eligibilityResults?.isResourceEligible ? 
+                              <span className="text-green-600 font-medium">✓ Eligible</span> : 
+                              <span className="text-red-600 font-medium">✗ Exceeds limit by {formatCurrency(eligibilityResults?.excessResources || 0)}</span>
+                            }
+                          </li>
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-shield-navy">Income Limits:</h4>
+                        <ul className="list-disc pl-5 mt-1">
+                          <li className="text-gray-700">
+                            Your applicable limit: {formatCurrency(eligibilityResults?.incomeLimit || keyMetrics.medicaidIncomeLimit)} per month
+                          </li>
+                          <li className="text-gray-700">
+                            Current monthly income: {formatCurrency(eligibilityResults?.totalIncome || 0)}
+                          </li>
+                          <li className="text-gray-700">
+                            Status: {eligibilityResults?.isIncomeEligible ? 
+                              <span className="text-green-600 font-medium">✓ Eligible</span> : 
+                              <span className="text-red-600 font-medium">✗ Exceeds limit</span>
+                            }
+                          </li>
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-shield-navy">Look-Back Period:</h4>
+                        <p className="text-gray-700 mt-1">
+                          Medicaid examines all financial transactions during the 5-year period prior to application to identify potentially disqualifying transfers.
+                        </p>
+                      </div>
+
+                      {/* Debug Section for Development */}
+                      {import.meta.env.DEV && eligibilityResults && (
+                        <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                          <h4 className="font-medium text-yellow-800 mb-2">🔍 Debug: All API Data</h4>
+                          <pre className="text-xs text-yellow-700 overflow-auto max-h-40">
+                            {JSON.stringify(eligibilityResults, null, 2)}
+                          </pre>
+                        </div>
+                      )}
                     </div>
                     
-                    <div>
-                      <h4 className="font-medium text-shield-navy">Income Limits:</h4>
-                      <ul className="list-disc pl-5 mt-1">
-                        <li className="text-gray-700">
-                          Your applicable limit: {formatCurrency(eligibilityResults?.incomeLimit || keyMetrics.medicaidIncomeLimit)} per month
-                        </li>
-                        <li className="text-gray-700">
-                          Current monthly income: {formatCurrency(eligibilityResults?.totalIncome || 0)}
-                        </li>
-                        <li className="text-gray-700">
-                          Status: {eligibilityResults?.isIncomeEligible ? 
-                            <span className="text-green-600 font-medium">✓ Eligible</span> : 
-                            <span className="text-red-600 font-medium">✗ Exceeds limit</span>
-                          }
-                        </li>
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium text-shield-navy">Look-Back Period:</h4>
+                    <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
+                      <p className="text-shield-navy font-medium">Next Steps:</p>
                       <p className="text-gray-700 mt-1">
-                        Medicaid examines all financial transactions during the 5-year period prior to application to identify potentially disqualifying transfers.
+                        Schedule a detailed consultation with our Medicaid planning specialist to create a personalized eligibility timeline and implementation plan.
                       </p>
                     </div>
-
-                    {/* Debug Section for Development */}
-                    {import.meta.env.DEV && eligibilityResults && (
-                      <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
-                        <h4 className="font-medium text-yellow-800 mb-2">🔍 Debug: All API Data</h4>
-                        <pre className="text-xs text-yellow-700 overflow-auto max-h-40">
-                          {JSON.stringify(eligibilityResults, null, 2)}
-                        </pre>
-                      </div>
-                    )}
                   </div>
-                  
-                  <div className="bg-shield-lightBlue p-4 rounded-md mt-4">
-                    <p className="text-shield-navy font-medium">Next Steps:</p>
-                    <p className="text-gray-700 mt-1">
-                      Schedule a detailed consultation with our Medicaid planning specialist to create a personalized eligibility timeline and implementation plan.
-                    </p>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
