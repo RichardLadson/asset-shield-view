@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ClientInfo, Assets, Income, Expenses, MedicalInfo, LivingInfo } from "@/services/types";
 import api from "@/services/api";
@@ -203,14 +204,14 @@ export const usePlanningActions = (
         console.warn('No email provided by user, using temporary email for demo purposes');
       }
       
-      // Restructured payload to match backend expectations (snake_case)
+      // Restructured payload to match backend expectations (camelCase)
       const payload = {
-        client_info: clientInfoPayload,
+        clientInfo: clientInfoPayload,
         assets: effectiveAssets || {},
         income: effectiveIncome || {},
         expenses: effectiveExpenses || {},
-        medical_info: effectiveMedicalInfo || {},
-        living_info: effectiveLivingInfo || {},
+        medicalInfo: effectiveMedicalInfo || {},
+        livingInfo: effectiveLivingInfo || {},
         state: effectiveState,
       };
       
